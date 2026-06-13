@@ -357,7 +357,9 @@ export default function App() {
 function formatDate(d) {
   const [y,m,day] = d.split("-");
   const months = ["Ιαν","Φεβ","Μαρ","Απρ","Μαΐ","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
-  return `${day} ${months[parseInt(m)-1]} ${y}`;
+  const days = ["Κυριακή","Δευτέρα","Τρίτη","Τετάρτη","Πέμπτη","Παρασκευή","Σάββατο"];
+  const weekday = days[new Date(parseInt(y), parseInt(m)-1, parseInt(day)).getDay()];
+  return `${weekday}, ${day} ${months[parseInt(m)-1]} ${y}`;
 }
 
 const s = {
