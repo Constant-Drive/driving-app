@@ -29,6 +29,7 @@ export default function App() {
   const [editStudentJob, setEditStudentJob] = useState("");
   const [editStudentNotes, setEditStudentNotes] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentJob, setNewStudentJob] = useState("");
   const [newStudentNotes, setNewStudentNotes] = useState("");
@@ -77,8 +78,10 @@ export default function App() {
 
   function addStudent() {
     if (!newStudentName.trim()) return;
-    const s = { id: Date.now(), name: newStudentName.trim(), phone: newStudentPhone.trim(), job: newStudentJob.trim(), notes: newStudentNotes.trim(), lessons: [] };
-    updateStudents(prev => [...prev, s]);
+    const exists = students.some(st => st.name.toLowerCase() === newStudentName.trim().toLowerCase());
+    if (exists) { setDuplicateWarning(true); return; }
+    const st = { id: Date.now(), name: newStudentName.trim(), phone: newStudentPhone.trim(), job: newStudentJob.trim(), notes: newStudentNotes.trim(), lessons: [] };
+    updateStudents(prev => [...prev, st]);
     setNewStudentName(""); setNewStudentPhone(""); setNewStudentJob(""); setNewStudentNotes("");
     setView("home");
   }
@@ -145,14 +148,27 @@ export default function App() {
     const [editingIdx, setEditingIdx] = useState(null);
     const [editingVal, setEditingVal] = useState("");
     const [newItem, setNewItem] = useState("");
+    const [pendingRemove, setPendingRemove] = useState(null);
     function startEdit(i) { setEditingIdx(i); setEditingVal(items[i]); }
     function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]=editingVal.trim(); onUpdate(next); setEditingIdx(null); }
-    function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); }
+    function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
     function moveUp(i) { if(i===0) return; const next=[...items]; [next[i-1],next[i]]=[next[i],next[i-1]]; onUpdate(next); }
     function moveDown(i) { if(i===items.length-1) return; const next=[...items]; [next[i],next[i+1]]=[next[i+1],next[i]]; onUpdate(next); }
     function addItem() { if(!newItem.trim()) return; onUpdate([...items, newItem.trim()]); setNewItem(""); }
     return (
       <div>
+        {pendingRemove !== null && (
+          <div style={s.overlay}>
+            <div style={s.dialog}>
+              <div style={s.dialogIcon}>⚠️</div>
+              <div style={s.dialogMsg}>Να διαγραφεί οριστικά το "{items[pendingRemove]}";</div>
+              <div style={s.dialogBtns}>
+                <button style={s.dialogCancel} onClick={() => setPendingRemove(null)}>Ακύρωση</button>
+                <button style={s.dialogConfirm} onClick={() => remove(pendingRemove)}>Διαγραφή</button>
+              </div>
+            </div>
+          </div>
+        )}
         {items.map((item,i) => (
           <div key={i} style={s.listRow}>
             {editingIdx===i
@@ -162,7 +178,7 @@ export default function App() {
               <button style={s.arrowBtn} onClick={()=>moveUp(i)} disabled={i===0}>▲</button>
               <button style={s.arrowBtn} onClick={()=>moveDown(i)} disabled={i===items.length-1}>▼</button>
               {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
-              <button style={s.removeBtn} onClick={()=>remove(i)}>✕</button>
+              <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
             </div>
           </div>
         ))}
@@ -218,7 +234,7 @@ export default function App() {
         {searchQuery && students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
           <div style={s.empty}><div style={{fontSize:36}}>🔍</div><div style={s.emptyText}>Δεν βρέθηκε μαθητής</div></div>
         )}
-        {students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).map(st => (
+        {students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name, 'el')).map(st => (
           <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
             <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
             <div style={s.studentInfo}>
@@ -239,7 +255,8 @@ export default function App() {
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Νέος Μαθητής</div></div></div>
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ονοματεπώνυμο</label>
-        <input style={s.input} placeholder="π.χ. Γιώργος Παπαδόπουλος" value={newStudentName} onChange={e => setNewStudentName(e.target.value)}/>
+        <input style={{...s.input, borderColor: duplicateWarning ? "#c62828" : "#e0e0e0"}} placeholder="π.χ. Γιώργος Παπαδόπουλος" value={newStudentName} onChange={e => { setNewStudentName(e.target.value); setDuplicateWarning(false); }}/>
+        {duplicateWarning && <div style={{color:"#c62828", fontSize:13, fontWeight:600}}>⚠️ Υπάρχει ήδη μαθητής με αυτό το όνομα. Διαφοροποίησέ το λίγο (π.χ. προσθέσε αρχικό επωνύμου).</div>}
         <label style={s.label}>Τηλέφωνο (προαιρετικό)</label>
         <input style={s.input} placeholder="π.χ. 6901234567" value={newStudentPhone} onChange={e => setNewStudentPhone(e.target.value)}/>
         <label style={s.label}>Επάγγελμα (προαιρετικό)</label>
@@ -266,11 +283,11 @@ export default function App() {
           <StatusBadge />
         </div></div>
         <div style={s.container}>
+          {st.notes && <div style={s.notes}>📝 {st.notes}</div>}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
           </div>
-          {st.notes && <div style={s.notes}>📝 {st.notes}</div>}
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map(l => (
             <div key={l.id} style={s.lessonCard}>
