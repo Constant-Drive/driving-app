@@ -296,7 +296,10 @@ export default function App() {
               <div style={s.lessonTop}><div><div style={s.lessonDate}>{formatDate(l.date)}</div><div style={s.lessonDur}>{l.duration} λεπτά</div></div></div>
               {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
-              {l.notes && <div style={s.lessonNotes}>{l.notes}</div>}
+              {l.notes && <div style={{...s.lessonNotes, position:"relative"}}>
+                <span style={{position:"absolute", top:8, right:8, fontSize:13}}>📝</span>
+                <span style={{display:"block", paddingRight:20}}>{l.notes}</span>
+              </div>}
               <div style={s.lessonActions}>
                 <button style={s.editBtn} onClick={() => startEditLesson(l)}>Επεξεργασία</button>
                 <button style={s.delBtn} onClick={() => deleteLesson(l.id)}>Διαγραφή</button>
