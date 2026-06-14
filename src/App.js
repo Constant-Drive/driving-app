@@ -248,6 +248,12 @@ export default function App() {
           </div>
         ))}
         <button style={s.fab} onClick={() => setView("addStudent")}>+ Νέος Μαθητής</button>
+        {students.length > 0 && (
+          <div style={s.totalBox}>
+            <span style={s.totalLbl}>Σύνολο μαθητών</span>
+            <span style={s.totalNum}>{students.length}</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -443,4 +449,7 @@ const s = {
   editSmallBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:6,padding:"3px 7px",fontSize:12,cursor:"pointer"},
   saveSmallBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:6,padding:"3px 7px",fontSize:13,cursor:"pointer",fontWeight:700},
   notesToggleBtn:{background:"#fff9c4",color:"#888",border:"1px solid #fff9c4",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",width:"100%",textAlign:"left"},
+  totalBox:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"white",borderRadius:12,padding:"12px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
+  totalLbl:{fontSize:13,fontWeight:600,color:"#888"},
+  totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
 };
