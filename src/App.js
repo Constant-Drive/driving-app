@@ -296,7 +296,10 @@ export default function App() {
               <div style={s.lessonTop}><div><div style={s.lessonDate}>{formatDate(l.date)}</div><div style={s.lessonDur}>{l.duration} λεπτά</div></div></div>
               {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
-              {l.notes && <div style={s.lessonNotes}>{l.notes}</div>}
+              {l.notes && <div style={{...s.lessonNotes, position:"relative"}}>
+                <span style={{position:"absolute", top:8, right:8, fontSize:13}}>📝</span>
+                <span style={{display:"block", paddingRight:20}}>{l.notes}</span>
+              </div>}
               <div style={s.lessonActions}>
                 <button style={s.editBtn} onClick={() => startEditLesson(l)}>Επεξεργασία</button>
                 <button style={s.delBtn} onClick={() => deleteLesson(l.id)}>Διαγραφή</button>
@@ -401,8 +404,8 @@ const s = {
   tags:{display:"flex",flexWrap:"wrap",gap:5},
   tag:{background:"#e8eaf6",color:"#3949ab",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600},
   notes:{fontSize:13,color:"#555",background:"#fafafa",borderRadius:8,padding:"8px 10px"},
-  lessonNotes:{fontSize:13,color:"#555",background:"#fff8f0",borderRadius:8,padding:"8px 10px",border:"1px solid #ffe0b2",whiteSpace:"pre-wrap"},
-  studentNotes:{fontSize:13,color:"#555",background:"#fffde7",borderRadius:8,padding:"8px 10px",border:"1px solid #fff9c4",whiteSpace:"pre-wrap"},
+  lessonNotes:{fontSize:13,color:"#555",background:"#fff8f0",borderRadius:8,padding:"8px 10px",border:"1px solid #ffe0b2",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"},
+  studentNotes:{fontSize:13,color:"#555",background:"#fffde7",borderRadius:8,padding:"8px 10px",border:"1px solid #fff9c4",whiteSpace:"pre-wrap",wordBreak:"break-word",overflowWrap:"break-word"},
   lessonActions:{display:"flex",gap:8,justifyContent:"flex-end"},
   editBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:600,cursor:"pointer"},
   delBtn:{background:"#ffebee",color:"#c62828",border:"none",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:600,cursor:"pointer"},
