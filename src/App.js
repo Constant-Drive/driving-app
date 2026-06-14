@@ -283,7 +283,7 @@ export default function App() {
           <StatusBadge />
         </div></div>
         <div style={s.container}>
-          {st.notes && <div style={s.notes}>📝 {st.notes}</div>}
+          {st.notes && <div style={s.studentNotes}>📝 {st.notes}</div>}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
@@ -381,7 +381,7 @@ const s = {
   fab:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"14px 20px",fontSize:16,fontWeight:700,cursor:"pointer",marginTop:4,boxShadow:"0 2px 8px rgba(26,35,126,0.3)"},
   searchBox:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 14px",gap:8,boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   searchIcon:{fontSize:16}, searchInput:{flex:1,border:"none",outline:"none",fontSize:15,fontFamily:"inherit",background:"transparent"},
-  searchClear:{background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",padding:"0 2px",fontWeight:700},
+  searchClear:{background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",padding:"0 2px",fontWeight:700,marginRight:4},
   overlay:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000},
   dialog:{background:"white",borderRadius:18,padding:"28px 24px",maxWidth:320,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"},
   dialogIcon:{fontSize:40,marginBottom:12}, dialogMsg:{fontSize:16,color:"#333",fontWeight:600,marginBottom:24,lineHeight:1.4},
@@ -399,6 +399,7 @@ const s = {
   tags:{display:"flex",flexWrap:"wrap",gap:5},
   tag:{background:"#e8eaf6",color:"#3949ab",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600},
   notes:{fontSize:13,color:"#555",background:"#fafafa",borderRadius:8,padding:"8px 10px"},
+  studentNotes:{fontSize:13,color:"#555",background:"#fffde7",borderRadius:8,padding:"8px 10px",border:"1px solid #fff9c4"},
   lessonActions:{display:"flex",gap:8,justifyContent:"flex-end"},
   editBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:600,cursor:"pointer"},
   delBtn:{background:"#ffebee",color:"#c62828",border:"none",borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:600,cursor:"pointer"},
