@@ -285,10 +285,7 @@ export default function App() {
           <StatusBadge />
         </div></div>
         <div style={s.container}>
-          {st.notes && <div style={{...s.studentNotes, position:"relative", paddingTop:24}}>
-            <span style={{position:"absolute", top:6, right:8, fontSize:14}}>📝</span>
-            {st.notes}
-          </div>}
+          {st.notes && <div style={s.studentNotes}>{st.notes}</div>}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
