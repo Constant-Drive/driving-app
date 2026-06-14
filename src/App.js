@@ -285,10 +285,7 @@ export default function App() {
           <StatusBadge />
         </div></div>
         <div style={s.container}>
-          {st.notes && <div>
-            <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
-            <div style={s.studentNotes}>{st.notes}</div>
-          </div>}
+          {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
@@ -358,6 +355,21 @@ export default function App() {
       </div>
     </div>
   );
+
+  function NotesToggle({ notes }) {
+    const [show, setShow] = useState(false);
+    return (
+      <div>
+        <button style={s.notesToggleBtn} onClick={() => setShow(v => !v)}>
+          🔒 {show ? "Απόκρυψη σημειώσεων" : "Εμφάνιση σημειώσεων"}
+        </button>
+        {show && <div style={{marginTop:6}}>
+          <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
+          <div style={s.studentNotes}>{notes}</div>
+        </div>}
+      </div>
+    );
+  }
 
   return null;
 }
@@ -430,4 +442,5 @@ const s = {
   arrowBtn:{background:"#f0f0f0",color:"#555",border:"none",borderRadius:6,padding:"3px 7px",fontSize:12,cursor:"pointer",fontWeight:700},
   editSmallBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:6,padding:"3px 7px",fontSize:12,cursor:"pointer"},
   saveSmallBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:6,padding:"3px 7px",fontSize:13,cursor:"pointer",fontWeight:700},
+  notesToggleBtn:{background:"#fff9c4",color:"#888",border:"1px solid #fff9c4",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",width:"100%",textAlign:"left"},
 };
