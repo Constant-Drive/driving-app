@@ -225,9 +225,11 @@ export default function App() {
         <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
       </div></div>
       <div style={s.container}>
-        <div style={s.searchBox}>
-          <span style={s.searchIcon}>🔍</span>
-          <input style={s.searchInput} placeholder="Αναζήτηση μαθητή..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}/>
+        <div style={{position:"relative"}}>
+          <div style={s.searchBox}>
+            <span style={s.searchIcon}>🔍</span>
+            <input style={{...s.searchInput, paddingRight: searchQuery ? 28 : 0}} placeholder="Αναζήτηση μαθητή..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}/>
+          </div>
           {searchQuery && <button style={s.searchClear} onClick={() => setSearchQuery("")}>✕</button>}
         </div>
         {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πρόσθεσε τον πρώτο σου μαθητή παρακάτω</div></div>}
@@ -379,9 +381,9 @@ const s = {
   studentPhone:{fontSize:13,color:"#888",marginTop:2}, studentMeta:{fontSize:13,color:"#555",marginTop:4},
   chevron:{fontSize:24,color:"#ccc"},
   fab:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"14px 20px",fontSize:16,fontWeight:700,cursor:"pointer",marginTop:4,boxShadow:"0 2px 8px rgba(26,35,126,0.3)"},
-  searchBox:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 14px",gap:8,boxShadow:"0 1px 4px rgba(0,0,0,0.08)",overflow:"hidden"},
+  searchBox:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 14px",gap:8,boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   searchIcon:{fontSize:16,flexShrink:0}, searchInput:{flex:1,border:"none",outline:"none",fontSize:15,fontFamily:"inherit",background:"transparent",minWidth:0},
-  searchClear:{background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",padding:"0 4px",fontWeight:700,flexShrink:0},
+  searchClear:{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",fontWeight:700,padding:0},
   overlay:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000},
   dialog:{background:"white",borderRadius:18,padding:"28px 24px",maxWidth:320,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"},
   dialogIcon:{fontSize:40,marginBottom:12}, dialogMsg:{fontSize:16,color:"#333",fontWeight:600,marginBottom:24,lineHeight:1.4},
