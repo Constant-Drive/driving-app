@@ -285,7 +285,10 @@ export default function App() {
           <StatusBadge />
         </div></div>
         <div style={s.container}>
-          {st.notes && <div style={s.studentNotes}>{st.notes}</div>}
+          {st.notes && <div>
+            <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
+            <div style={s.studentNotes}>{st.notes}</div>
+          </div>}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
@@ -297,7 +300,7 @@ export default function App() {
               {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
               {l.notes && <div>
-                <div style={{fontSize:10,fontWeight:700,color:"#e65100",textTransform:"uppercase",marginBottom:3,letterSpacing:0.5}}>ΣΗΜΕΙΩΣΕΙΣ</div>
+                <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
                 <div style={s.lessonNotes}>{l.notes}</div>
               </div>}
               <div style={s.lessonActions}>
