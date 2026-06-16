@@ -208,8 +208,12 @@ export default function App() {
           <div style={s.dialogIcon}>⚠️</div>
           <div style={s.dialogMsg}>{confirmDialog.message}</div>
           <div style={s.dialogBtns}>
-            <button style={s.dialogCancel} onClick={() => setConfirmDialog(null)}>Ακύρωση</button>
-            <button style={s.dialogConfirm} onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}>Διαγραφή</button>
+            <button style={s.dialogCancel} onClick={() => { if (confirmDialog.onCancel) confirmDialog.onCancel(); setConfirmDialog(null); }}>
+              {confirmDialog.cancelLabel || "Ακύρωση"}
+            </button>
+            <button style={s.dialogConfirm} onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null); }}>
+              {confirmDialog.confirmLabel || "Διαγραφή"}
+            </button>
           </div>
         </div>
       </div>
@@ -297,9 +301,13 @@ export default function App() {
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
           </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
-          {sorted.map(l => (
+          {sorted.map((l, idx) => (
             <div key={l.id} style={s.lessonCard}>
-              <div style={s.lessonTop}><div><div style={s.lessonDate}>{formatDate(l.date)}</div><div style={s.lessonDur}>{l.duration} λεπτά</div></div></div>
+              <div style={s.lessonTop}><div>
+                <div style={s.lessonDate}>{formatDate(l.date)}</div>
+                <div style={s.lessonNum}>Αρ. Μαθήματος: {sorted.length - idx}</div>
+                <div style={s.lessonDur}>{l.duration} λεπτά</div>
+              </div></div>
               {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
               {l.notes && <div>
@@ -335,9 +343,23 @@ export default function App() {
     </div>
   );
 
-  if (view === "addLesson") return (
+  if (view === "addLesson") {
+    function handleBack() {
+      if (editLesson) {
+        setConfirmDialog({
+          message: "Να αποθηκευτούν οι αλλαγές;",
+          confirmLabel: "Αποθήκευση",
+          cancelLabel: "Απόρριψη",
+          onConfirm: () => { saveLesson(); },
+          onCancel: () => { setView("student"); }
+        });
+      } else {
+        setView("student");
+      }
+    }
+    return (
     <div style={s.page}>
-      <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("student")}>‹ Πίσω</button><div style={s.appTitle}>{editLesson ? "Επεξεργασία Μαθήματος" : "Νέο Μάθημα"}</div></div></div>
+      <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={handleBack}>‹ Πίσω</button><div style={s.appTitle}>{editLesson ? "Επεξεργασία Μαθήματος" : "Νέο Μάθημα"}</div></div></div>
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(Number(e.target.value))}/>
@@ -420,6 +442,7 @@ const s = {
   lessonCard:{background:"white",borderRadius:14,padding:"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",gap:10},
   lessonTop:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"},
   lessonDate:{fontWeight:700,fontSize:15,color:"#1a237e"}, lessonDur:{fontSize:13,color:"#888",marginTop:2},
+  lessonNum:{fontSize:13,fontWeight:600,color:"#3949ab",marginTop:2},
   tagSection:{display:"flex",flexDirection:"column",gap:4},
   tagLabel:{fontSize:11,color:"#888",fontWeight:600,textTransform:"uppercase"},
   tags:{display:"flex",flexWrap:"wrap",gap:5},
