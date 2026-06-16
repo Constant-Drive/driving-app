@@ -144,52 +144,6 @@ export default function App() {
     setArr(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
   }
 
-  function EditableList({ items, onUpdate }) {
-    const [editingIdx, setEditingIdx] = useState(null);
-    const [editingVal, setEditingVal] = useState("");
-    const [newItem, setNewItem] = useState("");
-    const [pendingRemove, setPendingRemove] = useState(null);
-    function startEdit(i) { setEditingIdx(i); setEditingVal(items[i]); }
-    function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]=editingVal.trim(); onUpdate(next); setEditingIdx(null); }
-    function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
-    function moveUp(i) { if(i===0) return; const next=[...items]; [next[i-1],next[i]]=[next[i],next[i-1]]; onUpdate(next); }
-    function moveDown(i) { if(i===items.length-1) return; const next=[...items]; [next[i],next[i+1]]=[next[i+1],next[i]]; onUpdate(next); }
-    function addItem() { if(!newItem.trim()) return; onUpdate([...items, newItem.trim()]); setNewItem(""); }
-    return (
-      <div>
-        {pendingRemove !== null && (
-          <div style={s.overlay}>
-            <div style={s.dialog}>
-              <div style={s.dialogIcon}>⚠️</div>
-              <div style={s.dialogMsg}>Να διαγραφεί οριστικά το "{items[pendingRemove]}";</div>
-              <div style={s.dialogBtns}>
-                <button style={s.dialogCancel} onClick={() => setPendingRemove(null)}>Ακύρωση</button>
-                <button style={s.dialogConfirm} onClick={() => remove(pendingRemove)}>Διαγραφή</button>
-              </div>
-            </div>
-          </div>
-        )}
-        {items.map((item,i) => (
-          <div key={i} style={s.listRow}>
-            {editingIdx===i
-              ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal} onChange={e=>setEditingVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(i);if(e.key==="Escape")setEditingIdx(null);}}/>
-              : <span style={s.listItem}>{item}</span>}
-            <div style={{display:"flex", gap:4, flexShrink:0}}>
-              <button style={s.arrowBtn} onClick={()=>moveUp(i)} disabled={i===0}>▲</button>
-              <button style={s.arrowBtn} onClick={()=>moveDown(i)} disabled={i===items.length-1}>▼</button>
-              {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
-              <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
-            </div>
-          </div>
-        ))}
-        <div style={s.addRow}>
-          <input style={{...s.input, flex:1}} placeholder="Νέο στοιχείο..." value={newItem} onChange={e=>setNewItem(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addItem();}}/>
-          <button style={s.addBtn} onClick={addItem}>+ Προσθήκη</button>
-        </div>
-      </div>
-    );
-  }
-
   const StatusBadge = () => saving ? <div style={s.savingBadge}>💾 Αποθήκευση...</div> : null;
 
   if (loading) return (
@@ -384,22 +338,68 @@ export default function App() {
     </div>
   );
 
-  function NotesToggle({ notes }) {
-    const [show, setShow] = useState(false);
-    return (
-      <div>
-        <button style={s.notesToggleBtn} onClick={() => setShow(v => !v)}>
-          🔒 {show ? "Απόκρυψη σημειώσεων" : "Εμφάνιση σημειώσεων"}
-        </button>
-        {show && <div style={{marginTop:6}}>
-          <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
-          <div style={s.studentNotes}>{notes}</div>
-        </div>}
-      </div>
-    );
-  }
-
   return null;
+}
+
+function NotesToggle({ notes }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div>
+      <button style={s.notesToggleBtn} onClick={() => setShow(v => !v)}>
+        🔒 {show ? "Απόκρυψη σημειώσεων" : "Εμφάνιση σημειώσεων"}
+      </button>
+      {show && <div style={{marginTop:6}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
+        <div style={s.studentNotes}>{notes}</div>
+      </div>}
+    </div>
+  );
+}
+
+function EditableList({ items, onUpdate }) {
+  const [editingIdx, setEditingIdx] = useState(null);
+  const [editingVal, setEditingVal] = useState("");
+  const [newItem, setNewItem] = useState("");
+  const [pendingRemove, setPendingRemove] = useState(null);
+  function startEdit(i) { setEditingIdx(i); setEditingVal(items[i]); }
+  function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]=editingVal.trim(); onUpdate(next); setEditingIdx(null); }
+  function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
+  function moveUp(i) { if(i===0) return; const next=[...items]; [next[i-1],next[i]]=[next[i],next[i-1]]; onUpdate(next); }
+  function moveDown(i) { if(i===items.length-1) return; const next=[...items]; [next[i],next[i+1]]=[next[i+1],next[i]]; onUpdate(next); }
+  function addItem() { if(!newItem.trim()) return; onUpdate([...items, newItem.trim()]); setNewItem(""); }
+  return (
+    <div>
+      {pendingRemove !== null && (
+        <div style={s.overlay}>
+          <div style={s.dialog}>
+            <div style={s.dialogIcon}>⚠️</div>
+            <div style={s.dialogMsg}>Να διαγραφεί οριστικά το "{items[pendingRemove]}";</div>
+            <div style={s.dialogBtns}>
+              <button style={s.dialogCancel} onClick={() => setPendingRemove(null)}>Ακύρωση</button>
+              <button style={s.dialogConfirm} onClick={() => remove(pendingRemove)}>Διαγραφή</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {items.map((item,i) => (
+        <div key={i} style={s.listRow}>
+          {editingIdx===i
+            ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal} onChange={e=>setEditingVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(i);if(e.key==="Escape")setEditingIdx(null);}}/>
+            : <span style={s.listItem}>{item}</span>}
+          <div style={{display:"flex", gap:4, flexShrink:0}}>
+            <button style={s.arrowBtn} onClick={()=>moveUp(i)} disabled={i===0}>▲</button>
+            <button style={s.arrowBtn} onClick={()=>moveDown(i)} disabled={i===items.length-1}>▼</button>
+            {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
+            <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
+          </div>
+        </div>
+      ))}
+      <div style={s.addRow}>
+        <input style={{...s.input, flex:1}} placeholder="Νέο στοιχείο..." value={newItem} onChange={e=>setNewItem(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addItem();}}/>
+        <button style={s.addBtn} onClick={addItem}>+ Προσθήκη</button>
+      </div>
+    </div>
+  );
 }
 
 function formatDate(d) {
