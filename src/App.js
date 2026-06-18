@@ -362,12 +362,39 @@ function EditableList({ items, onUpdate }) {
   const [editingVal, setEditingVal] = useState("");
   const [newItem, setNewItem] = useState("");
   const [pendingRemove, setPendingRemove] = useState(null);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [overIdx, setOverIdx] = useState(null);
   function startEdit(i) { setEditingIdx(i); setEditingVal(items[i]); }
   function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]=editingVal.trim(); onUpdate(next); setEditingIdx(null); }
   function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
-  function moveUp(i) { if(i===0) return; const next=[...items]; [next[i-1],next[i]]=[next[i],next[i-1]]; onUpdate(next); }
-  function moveDown(i) { if(i===items.length-1) return; const next=[...items]; [next[i],next[i+1]]=[next[i+1],next[i]]; onUpdate(next); }
   function addItem() { if(!newItem.trim()) return; onUpdate([...items, newItem.trim()]); setNewItem(""); }
+
+  function moveItem(from, to) {
+    if (from === null || to === null || from === to) return;
+    const next = [...items];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onUpdate(next);
+  }
+
+  // Touch drag support
+  function handleTouchMove(e) {
+    if (dragIdx === null) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el) {
+      const row = el.closest('[data-row-idx]');
+      if (row) {
+        const idx = parseInt(row.getAttribute('data-row-idx'));
+        if (idx !== overIdx) setOverIdx(idx);
+      }
+    }
+  }
+  function handleTouchEnd() {
+    if (dragIdx !== null && overIdx !== null) moveItem(dragIdx, overIdx);
+    setDragIdx(null); setOverIdx(null);
+  }
+
   return (
     <div>
       {pendingRemove !== null && (
@@ -383,13 +410,29 @@ function EditableList({ items, onUpdate }) {
         </div>
       )}
       {items.map((item,i) => (
-        <div key={i} style={s.listRow}>
+        <div key={i} data-row-idx={i}
+          style={{...s.listRow,
+            background: overIdx===i && dragIdx!==null ? "#e8eaf6" : "transparent",
+            opacity: dragIdx===i ? 0.4 : 1,
+            borderTop: overIdx===i && dragIdx!==null && dragIdx>i ? "2px solid #3949ab" : "1px solid transparent",
+            borderBottom: overIdx===i && dragIdx!==null && dragIdx<i ? "2px solid #3949ab" : "1px solid #f0f0f0"}}
+          onDragOver={(e)=>{e.preventDefault(); if(overIdx!==i) setOverIdx(i);}}
+          onDrop={(e)=>{e.preventDefault(); moveItem(dragIdx, i); setDragIdx(null); setOverIdx(null);}}
+        >
+          <span
+            draggable
+            onDragStart={()=>setDragIdx(i)}
+            onDragEnd={()=>{setDragIdx(null); setOverIdx(null);}}
+            onTouchStart={()=>setDragIdx(i)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={s.dragHandle}
+            title="Σύρε για αλλαγή σειράς"
+          >≡</span>
           {editingIdx===i
             ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal} onChange={e=>setEditingVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(i);if(e.key==="Escape")setEditingIdx(null);}}/>
-            : <span style={s.listItem}>{item}</span>}
+            : <span style={{...s.listItem, flex:1}}>{item}</span>}
           <div style={{display:"flex", gap:4, flexShrink:0}}>
-            <button style={s.arrowBtn} onClick={()=>moveUp(i)} disabled={i===0}>▲</button>
-            <button style={s.arrowBtn} onClick={()=>moveDown(i)} disabled={i===items.length-1}>▼</button>
             {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
             <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
           </div>
@@ -470,6 +513,7 @@ const s = {
   addRow:{display:"flex",gap:8,marginTop:12,alignItems:"center"},
   addBtn:{background:"#1a237e",color:"white",border:"none",borderRadius:10,padding:"10px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"},
   arrowBtn:{background:"#f0f0f0",color:"#555",border:"none",borderRadius:6,padding:"3px 7px",fontSize:12,cursor:"pointer",fontWeight:700},
+  dragHandle:{cursor:"grab",color:"#bbb",fontSize:20,padding:"0 10px 0 2px",flexShrink:0,touchAction:"none",userSelect:"none"},
   editSmallBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:6,padding:"3px 7px",fontSize:12,cursor:"pointer"},
   saveSmallBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:6,padding:"3px 7px",fontSize:13,cursor:"pointer",fontWeight:700},
   notesToggleBtn:{background:"#fff9c4",color:"#888",border:"1px solid #fff9c4",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",width:"100%",textAlign:"left"},
