@@ -326,7 +326,8 @@ export default function App() {
         <button style={s.btnPrimary} onClick={saveLesson}>Αποθήκευση</button>
       </div></div>
     </div>
-  );
+    );
+  }
 
   if (view === "settings") return (
     <div style={s.page}>
