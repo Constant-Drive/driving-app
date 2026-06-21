@@ -8,12 +8,21 @@ const DEFAULT_EXERCISES = [
   "Εκκίνηση / Στάση","Στροφές","Παρκάρισμα παράλληλο","Παρκάρισμα κάθετο",
   "Αντίστροφη","Κυκλικός κόμβος","Εθνική / Ταχύτητα","Προτεραιότητα / Σήματα",
   "Νυχτερινή οδήγηση","Αλλαγή λωρίδας","Φρενάρισμα έκτακτης ανάγκης","Κεκλιμένο επίπεδο",
-];
+].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 const DEFAULT_ROUTES = [
   "Κέντρο πόλης","Αυτοκινητόδρομος","Παραλιακή","Ορεινή διαδρομή","Σχολικές ζώνες",
-];
+].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 
 function today() { return new Date().toISOString().slice(0, 10); }
+
+// Normalize old string-array data to {name, reqNew, reqRetrain} objects
+function normalizeList(arr) {
+  if (!arr) return [];
+  return arr.map(it => typeof it === "string"
+    ? { name: it, reqNew: false, reqRetrain: false }
+    : { name: it.name, reqNew: !!it.reqNew, reqRetrain: !!it.reqRetrain });
+}
+function names(arr) { return normalizeList(arr).map(it => it.name); }
 
 export default function App() {
   const [students, setStudents] = useState([]);
@@ -29,6 +38,7 @@ export default function App() {
   const [editStudentJob, setEditStudentJob] = useState("");
   const [editStudentNotes, setEditStudentNotes] = useState("");
   const [newStudentName, setNewStudentName] = useState("");
+  const [newStudentType, setNewStudentType] = useState("new");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
   const [newStudentPhone, setNewStudentPhone] = useState("");
   const [newStudentJob, setNewStudentJob] = useState("");
@@ -50,8 +60,8 @@ export default function App() {
         if (snap.exists()) {
           const data = snap.data();
           setStudents(data.students || []);
-          if (data.exercises) setExercises(data.exercises);
-          if (data.routes) setRoutes(data.routes);
+          if (data.exercises) setExercises(normalizeList(data.exercises));
+          if (data.routes) setRoutes(normalizeList(data.routes));
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -76,11 +86,18 @@ export default function App() {
   function updateExercises(newEx) { setExercises(newEx); persist(students, newEx, routes); }
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
 
+  function startAddStudent(type) {
+    setNewStudentType(type);
+    setNewStudentName(""); setNewStudentPhone(""); setNewStudentJob(""); setNewStudentNotes("");
+    setDuplicateWarning(false);
+    setView("addStudent");
+  }
+
   function addStudent() {
     if (!newStudentName.trim()) return;
     const exists = students.some(st => st.name.toLowerCase() === newStudentName.trim().toLowerCase());
     if (exists) { setDuplicateWarning(true); return; }
-    const st = { id: Date.now(), name: newStudentName.trim(), phone: newStudentPhone.trim(), job: newStudentJob.trim(), notes: newStudentNotes.trim(), lessons: [] };
+    const st = { id: Date.now(), name: newStudentName.trim(), phone: newStudentPhone.trim(), job: newStudentJob.trim(), notes: newStudentNotes.trim(), type: newStudentType, lessons: [] };
     updateStudents(prev => [...prev, st]);
     setNewStudentName(""); setNewStudentPhone(""); setNewStudentJob(""); setNewStudentNotes("");
     setView("home");
@@ -110,8 +127,12 @@ export default function App() {
   function openStudent(s) { setSelectedStudent(s); setView("student"); }
 
   function startAddLesson() {
-    setLessonDate(today()); setLessonDuration(90); setLessonExercises([]);
-    setLessonRoutes([]); setLessonNotes(""); setEditLesson(null); setView("addLesson");
+    const type = selectedStudent.type || "new";
+    const reqKey = type === "retrain" ? "reqRetrain" : "reqNew";
+    const preEx = exercises.filter(it => it[reqKey]).map(it => it.name);
+    const preRt = routes.filter(it => it[reqKey]).map(it => it.name);
+    setLessonDate(today()); setLessonDuration(90); setLessonExercises(preEx);
+    setLessonRoutes(preRt); setLessonNotes(""); setEditLesson(null); setView("addLesson");
   }
 
   function startEditLesson(lesson) {
@@ -198,14 +219,15 @@ export default function App() {
           <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
             <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
             <div style={s.studentInfo}>
-              <div style={s.studentName}>{st.name}</div>
+              <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>}</div>
               {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
               <div style={s.studentMeta}>{st.lessons.length} μαθήματα</div>
             </div>
             <span style={s.chevron}>›</span>
           </div>
         ))}
-        <button style={s.fab} onClick={() => setView("addStudent")}>+ Νέος Μαθητής</button>
+        <button style={s.fab} onClick={() => startAddStudent("new")}>+ Νέος Μαθητής</button>
+        <button style={s.fabSecondary} onClick={() => startAddStudent("retrain")}>+ Μετεκπαίδευση</button>
         {students.length > 0 && (
           <div style={s.totalBox}>
             <span style={s.totalLbl}>Σύνολο μαθητών</span>
@@ -218,7 +240,7 @@ export default function App() {
 
   if (view === "addStudent") return (
     <div style={s.page}>
-      <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Νέος Μαθητής</div></div></div>
+      <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>{newStudentType === "retrain" ? "Νέα Μετεκπαίδευση" : "Νέος Μαθητής"}</div></div></div>
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ονοματεπώνυμο</label>
         <input style={{...s.input, borderColor: duplicateWarning ? "#c62828" : "#e0e0e0"}} placeholder="π.χ. Γιώργος Παπαδόπουλος" value={newStudentName} onChange={e => { setNewStudentName(e.target.value); setDuplicateWarning(false); }}/>
@@ -275,6 +297,7 @@ export default function App() {
             </div>
           ))}
           <div style={{display:"flex", gap:10, marginTop:8}}><button style={s.btnPrimary} onClick={startAddLesson}>+ Νέο Μάθημα</button></div>
+          <ProgressCheck student={st} exercises={exercises} routes={routes} />
           <div style={{display:"flex", gap:10}}>
             <button style={s.editBtn} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
             <button style={s.btnDanger} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
@@ -318,9 +341,9 @@ export default function App() {
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(Number(e.target.value))}/>
         <label style={s.label}>Δοκιμασίες</label>
-        <div style={s.checkGrid}>{exercises.map(ex => <button key={ex} style={lessonExercises.includes(ex) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex)}>{ex}</button>)}</div>
+        <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
         <label style={s.label}>Διαδρομές</label>
-        <div style={s.checkGrid}>{routes.map(r => <button key={r} style={lessonRoutes.includes(r) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleArr(lessonRoutes, setLessonRoutes, r)}>{r}</button>)}</div>
+        <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleArr(lessonRoutes, setLessonRoutes, r.name)}>{r.name}</button>)}</div>
         <label style={s.label}>Σημειώσεις</label>
         <textarea style={{...s.input, height:80, resize:"vertical"}} placeholder="π.χ. Καλή πρόοδος στις στροφές..." value={lessonNotes} onChange={e => setLessonNotes(e.target.value)}/>
         <button style={s.btnPrimary} onClick={saveLesson}>Αποθήκευση</button>
@@ -340,6 +363,50 @@ export default function App() {
   );
 
   return null;
+}
+
+function ProgressCheck({ student, exercises, routes }) {
+  const [show, setShow] = useState(false);
+  const type = student.type || "new";
+  const reqKey = type === "retrain" ? "reqRetrain" : "reqNew";
+  const reqEx = exercises.filter(it => it[reqKey]).map(it => it.name);
+  const reqRt = routes.filter(it => it[reqKey]).map(it => it.name);
+  const doneEx = new Set();
+  const doneRt = new Set();
+  student.lessons.forEach(l => {
+    (l.exercises||[]).forEach(e => doneEx.add(e));
+    (l.routes||[]).forEach(r => doneRt.add(r));
+  });
+  const missingEx = reqEx.filter(e => !doneEx.has(e));
+  const missingRt = reqRt.filter(r => !doneRt.has(r));
+  const hasReq = reqEx.length + reqRt.length > 0;
+  const allDone = missingEx.length === 0 && missingRt.length === 0;
+
+  return (
+    <div>
+      <button style={s.progressBtn} onClick={() => setShow(v => !v)}>
+        📋 {show ? "Απόκρυψη ελέγχου προόδου" : "Έλεγχος υποχρεωτικών"}
+      </button>
+      {show && (
+        <div style={s.progressBox}>
+          {!hasReq && <div style={{fontSize:13,color:"#888"}}>Δεν έχουν οριστεί υποχρεωτικές δοκιμασίες/διαδρομές για αυτόν τον τύπο μαθητή. Όρισέ τες από τις Ρυθμίσεις ⚙️.</div>}
+          {hasReq && allDone && <div style={{fontSize:14,color:"#2e7d32",fontWeight:700}}>✅ Ολοκλήρωσε όλες τις υποχρεωτικές δοκιμασίες και διαδρομές!</div>}
+          {missingEx.length > 0 && (
+            <div style={{marginBottom:8}}>
+              <div style={{fontSize:11,fontWeight:600,color:"#c62828",textTransform:"uppercase",marginBottom:4}}>Υπολείπονται δοκιμασίες:</div>
+              <div style={s.tags}>{missingEx.map(e => <span key={e} style={s.missTag}>{e}</span>)}</div>
+            </div>
+          )}
+          {missingRt.length > 0 && (
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:"#c62828",textTransform:"uppercase",marginBottom:4}}>Υπολείπονται διαδρομές:</div>
+              <div style={s.tags}>{missingRt.map(r => <span key={r} style={s.missTag}>{r}</span>)}</div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function NotesToggle({ notes }) {
@@ -364,10 +431,11 @@ function EditableList({ items, onUpdate }) {
   const [pendingRemove, setPendingRemove] = useState(null);
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
-  function startEdit(i) { setEditingIdx(i); setEditingVal(items[i]); }
-  function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]=editingVal.trim(); onUpdate(next); setEditingIdx(null); }
+  function startEdit(i) { setEditingIdx(i); setEditingVal(items[i].name); }
+  function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]={...next[i], name:editingVal.trim()}; onUpdate(next); setEditingIdx(null); }
   function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
-  function addItem() { if(!newItem.trim()) return; onUpdate([...items, newItem.trim()]); setNewItem(""); }
+  function addItem() { if(!newItem.trim()) return; onUpdate([...items, {name:newItem.trim(), reqNew:false, reqRetrain:false}]); setNewItem(""); }
+  function toggleReq(i, key) { const next=[...items]; next[i]={...next[i], [key]:!next[i][key]}; onUpdate(next); }
 
   function moveItem(from, to) {
     if (from === null || to === null || from === to) return;
@@ -377,7 +445,6 @@ function EditableList({ items, onUpdate }) {
     onUpdate(next);
   }
 
-  // Touch drag support
   function handleTouchMove(e) {
     if (dragIdx === null) return;
     const touch = e.touches[0];
@@ -401,7 +468,7 @@ function EditableList({ items, onUpdate }) {
         <div style={s.overlay}>
           <div style={s.dialog}>
             <div style={s.dialogIcon}>⚠️</div>
-            <div style={s.dialogMsg}>Να διαγραφεί οριστικά το "{items[pendingRemove]}";</div>
+            <div style={s.dialogMsg}>Να διαγραφεί οριστικά το "{items[pendingRemove].name}";</div>
             <div style={s.dialogBtns}>
               <button style={s.dialogCancel} onClick={() => setPendingRemove(null)}>Ακύρωση</button>
               <button style={s.dialogConfirm} onClick={() => remove(pendingRemove)}>Διαγραφή</button>
@@ -409,9 +476,10 @@ function EditableList({ items, onUpdate }) {
           </div>
         </div>
       )}
+      <div style={{fontSize:11,color:"#888",marginBottom:6}}>Τικ 🆕 = υποχρεωτικό για Νέο μαθητή, 🔄 = για Μετεκπαίδευση</div>
       {items.map((item,i) => (
         <div key={i} data-row-idx={i}
-          style={{...s.listRow,
+          style={{...s.listRowCol,
             background: overIdx===i && dragIdx!==null ? "#e8eaf6" : "transparent",
             opacity: dragIdx===i ? 0.4 : 1,
             borderTop: overIdx===i && dragIdx!==null && dragIdx>i ? "2px solid #3949ab" : "1px solid transparent",
@@ -419,22 +487,28 @@ function EditableList({ items, onUpdate }) {
           onDragOver={(e)=>{e.preventDefault(); if(overIdx!==i) setOverIdx(i);}}
           onDrop={(e)=>{e.preventDefault(); moveItem(dragIdx, i); setDragIdx(null); setOverIdx(null);}}
         >
-          <span
-            draggable
-            onDragStart={()=>setDragIdx(i)}
-            onDragEnd={()=>{setDragIdx(null); setOverIdx(null);}}
-            onTouchStart={()=>setDragIdx(i)}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={s.dragHandle}
-            title="Σύρε για αλλαγή σειράς"
-          >≡</span>
-          {editingIdx===i
-            ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal} onChange={e=>setEditingVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(i);if(e.key==="Escape")setEditingIdx(null);}}/>
-            : <span style={{...s.listItem, flex:1}}>{item}</span>}
-          <div style={{display:"flex", gap:4, flexShrink:0}}>
-            {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
-            <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
+          <div style={{display:"flex", alignItems:"center", width:"100%"}}>
+            <span
+              draggable
+              onDragStart={()=>setDragIdx(i)}
+              onDragEnd={()=>{setDragIdx(null); setOverIdx(null);}}
+              onTouchStart={()=>setDragIdx(i)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={s.dragHandle}
+              title="Σύρε για αλλαγή σειράς"
+            >≡</span>
+            {editingIdx===i
+              ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal} onChange={e=>setEditingVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveEdit(i);if(e.key==="Escape")setEditingIdx(null);}}/>
+              : <span style={{...s.listItem, flex:1}}>{item.name}</span>}
+            <div style={{display:"flex", gap:4, flexShrink:0}}>
+              {editingIdx===i ? <button style={s.saveSmallBtn} onClick={()=>saveEdit(i)}>✓</button> : <button style={s.editSmallBtn} onClick={()=>startEdit(i)}>✏️</button>}
+              <button style={s.removeBtn} onClick={()=>setPendingRemove(i)}>✕</button>
+            </div>
+          </div>
+          <div style={{display:"flex", gap:6, marginLeft:34, marginTop:4}}>
+            <button style={item.reqNew ? s.reqChipActive : s.reqChip} onClick={()=>toggleReq(i,"reqNew")}>🆕 Νέος</button>
+            <button style={item.reqRetrain ? s.reqChipActive : s.reqChip} onClick={()=>toggleReq(i,"reqRetrain")}>🔄 Μετεκπ.</button>
           </div>
         </div>
       ))}
@@ -520,4 +594,12 @@ const s = {
   totalBox:{display:"flex",justifyContent:"space-between",alignItems:"center",background:"white",borderRadius:12,padding:"12px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   totalLbl:{fontSize:13,fontWeight:600,color:"#888"},
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
+  fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8},
+  typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4},
+  progressBtn:{background:"#e3f2fd",color:"#1565c0",border:"1px solid #bbdefb",borderRadius:8,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:8},
+  progressBox:{background:"white",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",marginTop:8},
+  missTag:{background:"#ffebee",color:"#c62828",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600},
+  listRowCol:{display:"flex",flexDirection:"column",padding:"9px 0",borderBottom:"1px solid #f0f0f0"},
+  reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
+  reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
 };
