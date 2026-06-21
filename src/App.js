@@ -296,11 +296,13 @@ export default function App() {
               </div>
             </div>
           ))}
-          <div style={{display:"flex", gap:10}}><button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button></div>
-          <ProgressCheck student={st} exercises={exercises} routes={routes} />
-          <div style={{display:"flex", gap:10}}>
-            <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
-            <button style={{...s.btnDanger, marginTop:0, flex:1}} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
+          <div style={{display:"flex", flexDirection:"column", gap:12}}>
+            <button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button>
+            <ProgressCheck student={st} exercises={exercises} routes={routes} />
+            <div style={{display:"flex", gap:10}}>
+              <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
+              <button style={{...s.btnDanger, marginTop:0, flex:1}} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
+            </div>
           </div>
         </div>
       </div>
