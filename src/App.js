@@ -127,12 +127,8 @@ export default function App() {
   function openStudent(s) { setSelectedStudent(s); setView("student"); }
 
   function startAddLesson() {
-    const type = selectedStudent.type || "new";
-    const reqKey = type === "retrain" ? "reqRetrain" : "reqNew";
-    const preEx = exercises.filter(it => it[reqKey]).map(it => it.name);
-    const preRt = routes.filter(it => it[reqKey]).map(it => it.name);
-    setLessonDate(today()); setLessonDuration(90); setLessonExercises(preEx);
-    setLessonRoutes(preRt); setLessonNotes(""); setEditLesson(null); setView("addLesson");
+    setLessonDate(today()); setLessonDuration(90); setLessonExercises([]);
+    setLessonRoutes([]); setLessonNotes(""); setEditLesson(null); setView("addLesson");
   }
 
   function startEditLesson(lesson) {
