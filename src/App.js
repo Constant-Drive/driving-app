@@ -296,11 +296,11 @@ export default function App() {
               </div>
             </div>
           ))}
-          <div style={{display:"flex", gap:10, marginTop:8}}><button style={s.btnPrimary} onClick={startAddLesson}>+ Νέο Μάθημα</button></div>
+          <div style={{display:"flex", gap:10}}><button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button></div>
           <ProgressCheck student={st} exercises={exercises} routes={routes} />
           <div style={{display:"flex", gap:10}}>
-            <button style={s.editBtn} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
-            <button style={s.btnDanger} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
+            <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
+            <button style={{...s.btnDanger, marginTop:0, flex:1}} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
           </div>
         </div>
       </div>
@@ -596,7 +596,7 @@ const s = {
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
   fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer"},
   typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4},
-  progressBtn:{background:"#e3f2fd",color:"#1565c0",border:"1px solid #bbdefb",borderRadius:8,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:8},
+  progressBtn:{background:"#e3f2fd",color:"#1565c0",border:"1px solid #bbdefb",borderRadius:8,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
   progressBox:{background:"white",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",marginTop:8},
   missTag:{background:"#ffebee",color:"#c62828",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600},
   listRowCol:{display:"flex",flexDirection:"column",padding:"9px 0",borderBottom:"1px solid #f0f0f0"},
