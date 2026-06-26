@@ -26,6 +26,10 @@ function names(arr) { return normalizeList(arr).map(it => it.name); }
 
 export default function App() {
   const [students, setStudents] = useState([]);
+  const [schedule, setSchedule] = useState([]);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
+  const [schedStudentId, setSchedStudentId] = useState("");
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
@@ -62,6 +66,7 @@ export default function App() {
           setStudents(data.students || []);
           if (data.exercises) setExercises(normalizeList(data.exercises));
           if (data.routes) setRoutes(normalizeList(data.routes));
+          if (data.schedule) setSchedule(data.schedule);
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -69,9 +74,9 @@ export default function App() {
     load();
   }, []);
 
-  async function persist(s, ex, rt) {
+  async function persist(s, ex, rt, sch) {
     setSaving(true);
-    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt }); }
+    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt, schedule: sch !== undefined ? sch : schedule }); }
     catch(e) { console.error(e); }
     setSaving(false);
   }
@@ -85,6 +90,32 @@ export default function App() {
   }
   function updateExercises(newEx) { setExercises(newEx); persist(students, newEx, routes); }
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
+  function updateSchedule(newSch) { setSchedule(newSch); persist(students, exercises, routes, newSch); }
+
+  function addScheduleEntry() {
+    if (!schedDate || !schedTime || !schedStudentId) return;
+    const stu = students.find(x => String(x.id) === String(schedStudentId));
+    const entry = {
+      id: Date.now(),
+      date: schedDate,
+      time: schedTime,
+      studentId: schedStudentId,
+      studentName: stu ? stu.name : "—",
+    };
+    updateSchedule([...schedule, entry]);
+    setSchedDate(""); setSchedTime(""); setSchedStudentId("");
+  }
+
+  function deleteScheduleEntry(id) {
+    setConfirmDialog({ message: "Να διαγραφεί αυτό το ραντεβού από το πρόγραμμα;",
+      onConfirm: () => updateSchedule(schedule.filter(e => e.id !== id)) });
+  }
+
+  function openStudentFromSchedule(studentId) {
+    const stu = students.find(x => String(x.id) === String(studentId));
+    if (stu) { setSelectedStudent(stu); setView("student"); }
+    else alert("Ο μαθητής έχει διαγραφεί. Το ραντεβού παραμένει στο ιστορικό.");
+  }
 
   function startAddStudent(type) {
     setNewStudentType(type);
@@ -197,6 +228,7 @@ export default function App() {
         <span style={s.logo}>🚗</span>
         <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
         <StatusBadge />
+        <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
         <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
       </div></div>
       <div style={s.container}>
@@ -347,6 +379,71 @@ export default function App() {
         <button style={s.btnPrimary} onClick={saveLesson}>Αποθήκευση</button>
       </div></div>
     </div>
+    );
+  }
+
+  if (view === "schedule") {
+    const sortedSched = [...schedule].sort((a,b) => {
+      const da = a.date + "T" + (a.time || "00:00");
+      const db = b.date + "T" + (b.time || "00:00");
+      return db.localeCompare(da);
+    });
+    const todayStr = today();
+    return (
+      <div style={s.page}>
+        <div style={s.header}><div style={s.headerInner}>
+          <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
+          <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα Μαθημάτων</div></div>
+          <StatusBadge />
+        </div></div>
+        <div style={s.container}>
+          <div style={s.formCard}>
+            <div style={s.sectionTitle}>Νέο Ραντεβού</div>
+            <div style={s.row2}>
+              <div style={{flex:1}}>
+                <label style={s.label}>Ημερομηνία</label>
+                <input type="date" style={s.input} value={schedDate} onChange={e => setSchedDate(e.target.value)}/>
+              </div>
+              <div style={{flex:1}}>
+                <label style={s.label}>Ώρα</label>
+                <input type="time" style={s.input} value={schedTime} onChange={e => setSchedTime(e.target.value)}/>
+              </div>
+            </div>
+            <label style={s.label}>Μαθητής</label>
+            <select style={s.input} value={schedStudentId} onChange={e => setSchedStudentId(e.target.value)}>
+              <option value="">— Επίλεξε μαθητή —</option>
+              {[...students].sort((a,b)=>a.name.localeCompare(b.name,'el')).map(st => (
+                <option key={st.id} value={st.id}>{st.name}{st.type === "retrain" ? " (Μετεκπ.)" : ""}</option>
+              ))}
+            </select>
+            <button style={{...s.btnPrimary, marginTop:12}} onClick={addScheduleEntry}>+ Προσθήκη στο Πρόγραμμα</button>
+          </div>
+
+          {sortedSched.length === 0 && (
+            <div style={s.empty}><div style={{fontSize:36}}>📅</div><div style={s.emptyText}>Δεν υπάρχουν προγραμματισμένα μαθήματα</div></div>
+          )}
+
+          {sortedSched.map(e => {
+            const isPast = (e.date + "T" + (e.time||"00:00")) < (todayStr + "T00:00");
+            const studentExists = students.some(x => String(x.id) === String(e.studentId));
+            return (
+              <div key={e.id} style={{...s.lessonCard, opacity: isPast ? 0.7 : 1}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
+                  <div style={{flex:1}}>
+                    <div style={s.lessonDate}>{formatDate(e.date)}</div>
+                    <div style={s.schedTime}>🕐 {e.time}</div>
+                    <div style={studentExists ? s.schedStudent : s.schedStudentGone}
+                      onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
+                      👤 {e.studentName}{!studentExists && " (διαγραμμένος)"}
+                    </div>
+                  </div>
+                  <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     );
   }
 
@@ -600,4 +697,8 @@ const s = {
   listRowCol:{display:"flex",flexDirection:"column",padding:"9px 0",borderBottom:"1px solid #f0f0f0"},
   reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
+  schedTime:{fontSize:14,color:"#1565c0",fontWeight:700,marginTop:3},
+  row2:{display:"flex",gap:10},
+  schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,marginTop:6,cursor:"pointer",textDecoration:"underline"},
+  schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,marginTop:6,fontStyle:"italic"},
 };
