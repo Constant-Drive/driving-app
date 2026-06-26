@@ -32,6 +32,7 @@ export default function App() {
   const [schedStudentId, setSchedStudentId] = useState("");
   const [schedViewDate, setSchedViewDate] = useState(today());
   const [showSchedForm, setShowSchedForm] = useState(false);
+  const [editSchedId, setEditSchedId] = useState(null);
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
@@ -97,17 +98,33 @@ export default function App() {
   function addScheduleEntry() {
     if (!schedDate || !schedTime || !schedStudentId) return;
     const stu = students.find(x => String(x.id) === String(schedStudentId));
-    const entry = {
-      id: Date.now(),
-      date: schedDate,
-      time: schedTime,
-      studentId: schedStudentId,
-      studentName: stu ? stu.name : "—",
-    };
-    updateSchedule([...schedule, entry]);
+    if (editSchedId) {
+      updateSchedule(schedule.map(e => e.id === editSchedId
+        ? { ...e, date: schedDate, time: schedTime, studentId: schedStudentId, studentName: stu ? stu.name : e.studentName }
+        : e));
+    } else {
+      const entry = {
+        id: Date.now(),
+        date: schedDate,
+        time: schedTime,
+        studentId: schedStudentId,
+        studentName: stu ? stu.name : "—",
+      };
+      updateSchedule([...schedule, entry]);
+    }
     setSchedViewDate(schedDate);
     setSchedDate(""); setSchedTime(""); setSchedStudentId("");
-    setShowSchedForm(false);
+    setShowSchedForm(false); setEditSchedId(null);
+  }
+
+  function startEditSchedule(e) {
+    setSchedDate(e.date); setSchedTime(e.time); setSchedStudentId(e.studentId);
+    setEditSchedId(e.id); setShowSchedForm(true);
+  }
+
+  function closeSchedForm() {
+    setShowSchedForm(false); setEditSchedId(null);
+    setSchedDate(""); setSchedTime(""); setSchedStudentId("");
   }
 
   function deleteScheduleEntry(id) {
@@ -403,7 +420,7 @@ export default function App() {
           <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
           <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
-          <button style={s.settingsBtn} onClick={() => { setSchedDate(schedViewDate); setShowSchedForm(true); }}>＋</button>
+          <button style={s.settingsBtn} onClick={() => { if (showSchedForm) { closeSchedForm(); } else { setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); } }}>{showSchedForm ? "✕" : "＋"}</button>
         </div></div>
         <div style={s.container}>
 
@@ -423,7 +440,7 @@ export default function App() {
           {/* New appointment form (collapsible) */}
           {showSchedForm && (
             <div style={s.formCard}>
-              <div style={s.sectionTitle}>Νέο Ραντεβού</div>
+              <div style={s.sectionTitle}>{editSchedId ? "Επεξεργασία Ραντεβού" : "Νέο Ραντεβού"}</div>
               <div style={s.row2}>
                 <div style={{flex:1}}>
                   <label style={s.label}>Ημερομηνία</label>
@@ -442,8 +459,8 @@ export default function App() {
                 ))}
               </select>
               <div style={{display:"flex", gap:10, marginTop:12}}>
-                <button style={{...s.btnPrimary, marginTop:0}} onClick={addScheduleEntry}>Προσθήκη</button>
-                <button style={{...s.dialogCancel, flex:1}} onClick={() => { setShowSchedForm(false); setSchedDate(""); setSchedTime(""); setSchedStudentId(""); }}>Ακύρωση</button>
+                <button style={{...s.btnPrimary, marginTop:0}} onClick={addScheduleEntry}>{editSchedId ? "Αποθήκευση" : "Προσθήκη"}</button>
+                <button style={{...s.dialogCancel, flex:1}} onClick={closeSchedForm}>Ακύρωση</button>
               </div>
             </div>
           )}
@@ -459,12 +476,18 @@ export default function App() {
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
                   <div style={{display:"flex", alignItems:"center", gap:14, flex:1}}>
                     <div style={s.schedTimeBig}>{e.time}</div>
-                    <div style={studentExists ? s.schedStudent : s.schedStudentGone}
-                      onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
-                      👤 {e.studentName}{!studentExists && " (διαγραμμένος)"}
+                    <div style={{display:"flex", alignItems:"center", gap:5}}>
+                      <span>👤</span>
+                      <span style={studentExists ? s.schedStudent : s.schedStudentGone}
+                        onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
+                        {e.studentName}{!studentExists && " (διαγραμμένος)"}
+                      </span>
                     </div>
                   </div>
-                  <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
+                  <div style={{display:"flex", gap:6}}>
+                    <button style={s.editSmallBtn} onClick={() => startEditSchedule(e)}>✏️</button>
+                    <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
+                  </div>
                 </div>
               </div>
             );
@@ -732,6 +755,6 @@ const s = {
   todayTag:{fontSize:11,fontWeight:600,color:"#2e7d32",marginTop:2},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
   row2:{display:"flex",gap:10},
-  schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,marginTop:6,cursor:"pointer",textDecoration:"underline"},
-  schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,marginTop:6,fontStyle:"italic"},
+  schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
+  schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
