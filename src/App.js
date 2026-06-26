@@ -475,9 +475,9 @@ export default function App() {
             return (
               <div key={e.id} style={{...s.lessonCard, opacity: isPastDay ? 0.6 : 1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-                  <div style={{display:"flex", alignItems:"center", gap:14, flex:1}}>
+                  <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
                     <div style={s.schedTimeBig}>{e.time}</div>
-                    <div style={{display:"flex", alignItems:"center", gap:5}}>
+                    <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
                       <span>👤</span>
                       <span style={studentExists ? s.schedStudent : s.schedStudentGone}
                         onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
@@ -749,7 +749,7 @@ const s = {
   reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   schedTime:{fontSize:14,color:"#1565c0",fontWeight:700,marginTop:3},
-  schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0",minWidth:60},
+  schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0",minWidth:52,flexShrink:0},
   dayNav:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 12px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,padding:"8px 16px",fontSize:18,fontWeight:700,cursor:"pointer"},
   dayNavDate:{fontSize:16,fontWeight:700,color:"#1a237e"},
