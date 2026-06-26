@@ -413,6 +413,7 @@ export default function App() {
       .filter(e => e.date === schedViewDate)
       .sort((a,b) => (a.time||"").localeCompare(b.time||""));
     const isToday = schedViewDate === today();
+    const isPastDay = schedViewDate < today();
 
     return (
       <div style={s.page}>
@@ -472,7 +473,7 @@ export default function App() {
           {dayEntries.map(e => {
             const studentExists = students.some(x => String(x.id) === String(e.studentId));
             return (
-              <div key={e.id} style={s.lessonCard}>
+              <div key={e.id} style={{...s.lessonCard, opacity: isPastDay ? 0.6 : 1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
                   <div style={{display:"flex", alignItems:"center", gap:14, flex:1}}>
                     <div style={s.schedTimeBig}>{e.time}</div>
