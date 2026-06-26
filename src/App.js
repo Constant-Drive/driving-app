@@ -30,6 +30,8 @@ export default function App() {
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
   const [schedStudentId, setSchedStudentId] = useState("");
+  const [schedViewDate, setSchedViewDate] = useState(today());
+  const [showSchedForm, setShowSchedForm] = useState(false);
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
@@ -103,7 +105,9 @@ export default function App() {
       studentName: stu ? stu.name : "—",
     };
     updateSchedule([...schedule, entry]);
+    setSchedViewDate(schedDate);
     setSchedDate(""); setSchedTime(""); setSchedStudentId("");
+    setShowSchedForm(false);
   }
 
   function deleteScheduleEntry(id) {
@@ -383,55 +387,78 @@ export default function App() {
   }
 
   if (view === "schedule") {
-    const sortedSched = [...schedule].sort((a,b) => {
-      const da = a.date + "T" + (a.time || "00:00");
-      const db = b.date + "T" + (b.time || "00:00");
-      return db.localeCompare(da);
-    });
-    const todayStr = today();
+    function shiftDay(delta) {
+      const d = new Date(schedViewDate + "T12:00:00");
+      d.setDate(d.getDate() + delta);
+      setSchedViewDate(d.toISOString().slice(0,10));
+    }
+    const dayEntries = schedule
+      .filter(e => e.date === schedViewDate)
+      .sort((a,b) => (a.time||"").localeCompare(b.time||""));
+    const isToday = schedViewDate === today();
+
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
           <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
-          <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα Μαθημάτων</div></div>
+          <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
+          <button style={s.settingsBtn} onClick={() => { setSchedDate(schedViewDate); setShowSchedForm(true); }}>＋</button>
         </div></div>
         <div style={s.container}>
-          <div style={s.formCard}>
-            <div style={s.sectionTitle}>Νέο Ραντεβού</div>
-            <div style={s.row2}>
-              <div style={{flex:1}}>
-                <label style={s.label}>Ημερομηνία</label>
-                <input type="date" style={s.input} value={schedDate} onChange={e => setSchedDate(e.target.value)}/>
-              </div>
-              <div style={{flex:1}}>
-                <label style={s.label}>Ώρα</label>
-                <input type="time" style={s.input} value={schedTime} onChange={e => setSchedTime(e.target.value)}/>
-              </div>
-            </div>
-            <label style={s.label}>Μαθητής</label>
-            <select style={s.input} value={schedStudentId} onChange={e => setSchedStudentId(e.target.value)}>
-              <option value="">— Επίλεξε μαθητή —</option>
-              {[...students].sort((a,b)=>a.name.localeCompare(b.name,'el')).map(st => (
-                <option key={st.id} value={st.id}>{st.name}{st.type === "retrain" ? " (Μετεκπ.)" : ""}</option>
-              ))}
-            </select>
-            <button style={{...s.btnPrimary, marginTop:12}} onClick={addScheduleEntry}>+ Προσθήκη στο Πρόγραμμα</button>
-          </div>
 
-          {sortedSched.length === 0 && (
-            <div style={s.empty}><div style={{fontSize:36}}>📅</div><div style={s.emptyText}>Δεν υπάρχουν προγραμματισμένα μαθήματα</div></div>
+          {/* Day navigator */}
+          <div style={s.dayNav}>
+            <button style={s.dayNavBtn} onClick={() => shiftDay(-1)}>◄</button>
+            <div style={{textAlign:"center", flex:1}}>
+              <div style={s.dayNavDate}>{formatDate(schedViewDate)}</div>
+              {isToday && <div style={s.todayTag}>Σήμερα</div>}
+            </div>
+            <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>►</button>
+          </div>
+          {!isToday && (
+            <button style={s.todayBtn} onClick={() => setSchedViewDate(today())}>Επιστροφή στο Σήμερα</button>
           )}
 
-          {sortedSched.map(e => {
-            const isPast = (e.date + "T" + (e.time||"00:00")) < (todayStr + "T00:00");
+          {/* New appointment form (collapsible) */}
+          {showSchedForm && (
+            <div style={s.formCard}>
+              <div style={s.sectionTitle}>Νέο Ραντεβού</div>
+              <div style={s.row2}>
+                <div style={{flex:1}}>
+                  <label style={s.label}>Ημερομηνία</label>
+                  <input type="date" style={s.input} value={schedDate} onChange={e => setSchedDate(e.target.value)}/>
+                </div>
+                <div style={{flex:1}}>
+                  <label style={s.label}>Ώρα</label>
+                  <input type="time" style={s.input} value={schedTime} onChange={e => setSchedTime(e.target.value)}/>
+                </div>
+              </div>
+              <label style={s.label}>Μαθητής</label>
+              <select style={s.input} value={schedStudentId} onChange={e => setSchedStudentId(e.target.value)}>
+                <option value="">— Επίλεξε μαθητή —</option>
+                {[...students].sort((a,b)=>a.name.localeCompare(b.name,'el')).map(st => (
+                  <option key={st.id} value={st.id}>{st.name}{st.type === "retrain" ? " (Μετεκπ.)" : ""}</option>
+                ))}
+              </select>
+              <div style={{display:"flex", gap:10, marginTop:12}}>
+                <button style={{...s.btnPrimary, marginTop:0}} onClick={addScheduleEntry}>Προσθήκη</button>
+                <button style={{...s.dialogCancel, flex:1}} onClick={() => { setShowSchedForm(false); setSchedDate(""); setSchedTime(""); setSchedStudentId(""); }}>Ακύρωση</button>
+              </div>
+            </div>
+          )}
+
+          {/* Day entries */}
+          {dayEntries.length === 0 && (
+            <div style={s.empty}><div style={{fontSize:36}}>📭</div><div style={s.emptyText}>Κανένα μάθημα αυτή την ημέρα</div></div>
+          )}
+          {dayEntries.map(e => {
             const studentExists = students.some(x => String(x.id) === String(e.studentId));
             return (
-              <div key={e.id} style={{...s.lessonCard, opacity: isPast ? 0.7 : 1}}>
-                <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start"}}>
-                  <div style={{flex:1}}>
-                    <div style={s.lessonDate}>{formatDate(e.date)}</div>
-                    <div style={s.schedTime}>🕐 {e.time}</div>
+              <div key={e.id} style={s.lessonCard}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+                  <div style={{display:"flex", alignItems:"center", gap:14, flex:1}}>
+                    <div style={s.schedTimeBig}>{e.time}</div>
                     <div style={studentExists ? s.schedStudent : s.schedStudentGone}
                       onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
                       👤 {e.studentName}{!studentExists && " (διαγραμμένος)"}
@@ -698,6 +725,12 @@ const s = {
   reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   schedTime:{fontSize:14,color:"#1565c0",fontWeight:700,marginTop:3},
+  schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0",minWidth:60},
+  dayNav:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 12px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
+  dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,padding:"8px 16px",fontSize:18,fontWeight:700,cursor:"pointer"},
+  dayNavDate:{fontSize:16,fontWeight:700,color:"#1a237e"},
+  todayTag:{fontSize:11,fontWeight:600,color:"#2e7d32",marginTop:2},
+  todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
   row2:{display:"flex",gap:10},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,marginTop:6,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,marginTop:6,fontStyle:"italic"},
