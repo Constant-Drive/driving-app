@@ -249,8 +249,10 @@ export default function App() {
         <span style={s.logo}>🚗</span>
         <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
         <StatusBadge />
-        <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-        <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
+        <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
+          <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+          <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
+        </div>
       </div></div>
       <div style={s.container}>
         <div style={{position:"relative"}}>
