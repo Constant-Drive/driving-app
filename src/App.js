@@ -446,13 +446,13 @@ export default function App() {
             <div style={s.formCard}>
               <div style={s.sectionTitle}>{editSchedId ? "Επεξεργασία Ραντεβού" : "Νέο Ραντεβού"}</div>
               <div style={s.row2}>
-                <div style={{flex:1}}>
+                <div style={{flex:1, minWidth:0}}>
                   <label style={s.label}>Ημερομηνία</label>
-                  <input type="date" style={s.input} value={schedDate} onChange={e => setSchedDate(e.target.value)}/>
+                  <input type="date" style={{...s.input, maxWidth:"100%"}} value={schedDate} onChange={e => setSchedDate(e.target.value)}/>
                 </div>
-                <div style={{flex:1}}>
+                <div style={{flex:1, minWidth:0}}>
                   <label style={s.label}>Ώρα</label>
-                  <input type="time" style={{...s.input, textAlign:"left"}} value={schedTime} onChange={e => setSchedTime(e.target.value)}/>
+                  <input type="time" style={{...s.input, textAlign:"left", maxWidth:"100%"}} value={schedTime} onChange={e => setSchedTime(e.target.value)}/>
                 </div>
               </div>
               <label style={s.label}>Μαθητής</label>
