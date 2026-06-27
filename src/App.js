@@ -318,8 +318,10 @@ export default function App() {
             {st.job && <div style={s.appSub}>💼 {st.job}</div>}
           </div>
           <StatusBadge />
-          <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-          <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
+          <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
+            <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+            <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
+          </div>
         </div></div>
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
