@@ -318,6 +318,7 @@ export default function App() {
             {st.job && <div style={s.appSub}>💼 {st.job}</div>}
           </div>
           <StatusBadge />
+          <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
         </div></div>
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
