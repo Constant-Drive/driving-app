@@ -428,7 +428,7 @@ export default function App() {
           {/* Day navigator */}
           <div style={s.dayNav}>
             <button style={s.dayNavBtn} onClick={() => shiftDay(-1)}>‹</button>
-            <div style={{textAlign:"center", flex:1, position:"relative"}}>
+            <div style={{textAlign:"center", flex:1, position:"relative", marginRight:12}}>
               <div style={s.dayNavDate}>
                 {formatDate(schedViewDate)}
                 {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length}</span>}
