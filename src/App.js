@@ -24,6 +24,34 @@ function normalizeList(arr) {
 }
 function names(arr) { return normalizeList(arr).map(it => it.name); }
 
+// Completion % of required items for a student
+function completionPct(student, exercises, routes) {
+  const reqKey = (student.type === "retrain") ? "reqRetrain" : "reqNew";
+  const reqEx = exercises.filter(it => it[reqKey]).map(it => it.name);
+  const reqRt = routes.filter(it => it[reqKey]).map(it => it.name);
+  const total = reqEx.length + reqRt.length;
+  if (total === 0) return null;
+  const doneEx = new Set(); const doneRt = new Set();
+  student.lessons.forEach(l => {
+    (l.exercises||[]).forEach(e => doneEx.add(e));
+    (l.routes||[]).forEach(r => doneRt.add(r));
+  });
+  const done = reqEx.filter(e => doneEx.has(e)).length + reqRt.filter(r => doneRt.has(r)).length;
+  return Math.round((done / total) * 100);
+}
+
+function lastLessonDate(student) {
+  if (!student.lessons || student.lessons.length === 0) return null;
+  return student.lessons.map(l => l.date).sort().slice(-1)[0];
+}
+
+function daysAgo(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + "T12:00:00");
+  const now = new Date(today() + "T12:00:00");
+  return Math.round((now - d) / 86400000);
+}
+
 export default function App() {
   const [students, setStudents] = useState([]);
   const [schedule, setSchedule] = useState([]);
@@ -262,6 +290,23 @@ export default function App() {
           </div>
           {searchQuery && <button style={s.searchClear} onClick={() => setSearchQuery("")}>✕</button>}
         </div>
+        {!searchQuery && (() => {
+          const nowStr = today() + "T" + new Date().toTimeString().slice(0,5);
+          const upcoming = schedule
+            .filter(e => (e.date + "T" + (e.time||"00:00")) >= nowStr)
+            .sort((a,b) => (a.date+"T"+(a.time||"00:00")).localeCompare(b.date+"T"+(b.time||"00:00")));
+          const next = upcoming[0];
+          if (!next) return null;
+          const exists = students.some(x => String(x.id) === String(next.studentId));
+          const isToday = next.date === today();
+          return (
+            <div style={s.nextCard} onClick={() => exists && openStudentFromSchedule(next.studentId)}>
+              <div style={s.nextLabel}>⏭️ Επόμενο μάθημα</div>
+              <div style={s.nextMain}>{next.studentName}</div>
+              <div style={s.nextWhen}>{isToday ? "Σήμερα" : formatDate(next.date)} • 🕐 {next.time}</div>
+            </div>
+          );
+        })()}
         {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πρόσθεσε τον πρώτο σου μαθητή παρακάτω</div></div>}
         {searchQuery && students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
           <div style={s.empty}><div style={{fontSize:36}}>🔍</div><div style={s.emptyText}>Δεν βρέθηκε μαθητής</div></div>
@@ -272,7 +317,10 @@ export default function App() {
             <div style={s.studentInfo}>
               <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>}</div>
               {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
-              <div style={s.studentMeta}>{st.lessons.length} μαθήματα</div>
+              <div style={s.studentMeta}>
+                {st.lessons.length} μαθήματα
+                {(() => { const d = daysAgo(lastLessonDate(st)); return d !== null ? <span style={{color:"#aaa"}}> • {d === 0 ? "σήμερα" : d === 1 ? "χθες" : `πριν ${d} μέρες`}</span> : null; })()}
+              </div>
             </div>
             <span style={s.chevron}>›</span>
           </div>
@@ -331,6 +379,21 @@ export default function App() {
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
           </div>
+          {(() => {
+            const pct = completionPct(st, exercises, routes);
+            if (pct === null) return null;
+            return (
+              <div style={s.progressWrap}>
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:5}}>
+                  <span style={s.progressLbl}>Ολοκλήρωση υποχρεωτικών</span>
+                  <span style={{...s.progressLbl, color: pct === 100 ? "#2e7d32" : "#1565c0", fontWeight:800}}>{pct}%</span>
+                </div>
+                <div style={s.progressTrack}>
+                  <div style={{...s.progressFill, width: pct + "%", background: pct === 100 ? "#2e7d32" : "linear-gradient(90deg,#1a237e,#3949ab)"}}/>
+                </div>
+              </div>
+            );
+          })()}
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map((l, idx) => (
             <div key={l.id} style={s.lessonCard}>
@@ -766,6 +829,14 @@ const s = {
   todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
   row2:{display:"flex",gap:10},
+  nextCard:{background:"linear-gradient(135deg,#1565c0,#1976d2)",borderRadius:14,padding:"14px 16px",color:"white",cursor:"pointer",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
+  nextLabel:{fontSize:12,color:"rgba(255,255,255,0.85)",fontWeight:600},
+  nextMain:{fontSize:18,fontWeight:800,marginTop:3},
+  nextWhen:{fontSize:13,color:"rgba(255,255,255,0.9)",marginTop:3},
+  progressWrap:{background:"white",borderRadius:12,padding:"12px 14px",boxShadow:"0 1px 4px rgba(0,0,0,0.07)"},
+  progressLbl:{fontSize:12,fontWeight:600,color:"#888"},
+  progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
+  progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
