@@ -428,12 +428,12 @@ export default function App() {
           {/* Day navigator */}
           <div style={s.dayNav}>
             <button style={s.dayNavBtn} onClick={() => shiftDay(-1)}>‹</button>
-            <div style={{textAlign:"center", flex:1, position:"relative", marginRight:12}}>
-              <div style={s.dayNavDate}>
-                {formatDate(schedViewDate)}
-                {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length}</span>}
+            <div style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 6px", minWidth:0, gap:3}}>
+              <div style={s.dayNavDate}>{formatDate(schedViewDate)}</div>
+              <div style={{display:"flex", alignItems:"center", gap:6}}>
+                {isToday && <span style={s.todayTag}>Σήμερα</span>}
+                {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length} {dayEntries.length === 1 ? "μάθημα" : "μαθήματα"}</span>}
               </div>
-              {isToday && <div style={s.todayTag}>Σήμερα</div>}
             </div>
             <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>›</button>
           </div>
@@ -755,9 +755,9 @@ const s = {
   schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0",minWidth:52,flexShrink:0},
   dayNav:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 12px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,width:38,height:38,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0},
-  dayNavDate:{fontSize:16,fontWeight:700,color:"#1a237e",display:"inline-flex",alignItems:"center",gap:8},
-  countBadge:{background:"#1565c0",color:"white",fontSize:12,fontWeight:700,borderRadius:"50%",minWidth:22,height:22,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:"0 5px"},
-  todayTag:{fontSize:11,fontWeight:600,color:"#2e7d32",marginTop:2},
+  dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
+  countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
+  todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
   row2:{display:"flex",gap:10},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
