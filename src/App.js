@@ -319,6 +319,7 @@ export default function App() {
           </div>
           <StatusBadge />
           <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+          <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
         </div></div>
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
@@ -349,7 +350,7 @@ export default function App() {
           <div style={{display:"flex", flexDirection:"column", gap:12}}>
             <button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button>
             <ProgressCheck student={st} exercises={exercises} routes={routes} />
-            <div style={{display:"flex", gap:10}}>
+            <div id="student-bottom" style={{display:"flex", gap:10}}>
               <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
               <button style={{...s.btnDanger, marginTop:0, flex:1}} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
             </div>
