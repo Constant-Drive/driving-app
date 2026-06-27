@@ -3,6 +3,7 @@ import { db } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const DATA_DOC = doc(db, "app", "data");
+const APP_PIN = "0300"; // ← Άλλαξε αυτόν τον κωδικό στον δικό σου
 
 const DEFAULT_EXERCISES = [
   "Εκκίνηση / Στάση","Στροφές","Παρκάρισμα παράλληλο","Παρκάρισμα κάθετο",
@@ -64,6 +65,9 @@ export default function App() {
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
+  const [unlocked, setUnlocked] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState("home");
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -85,6 +89,7 @@ export default function App() {
   const [lessonExercises, setLessonExercises] = useState([]);
   const [lessonRoutes, setLessonRoutes] = useState([]);
   const [lessonNotes, setLessonNotes] = useState("");
+  const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
 
@@ -211,6 +216,16 @@ export default function App() {
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null); setView("addLesson");
   }
 
+  function convertScheduleToLesson(entry) {
+    const stu = students.find(x => String(x.id) === String(entry.studentId));
+    if (!stu) { alert("Ο μαθητής έχει διαγραφεί."); return; }
+    setSelectedStudent(stu);
+    setLessonDate(entry.date); setLessonDuration(90); setLessonExercises([]);
+    setLessonRoutes([]); setLessonNotes(""); setEditLesson(null);
+    setConvertingSchedId(entry.id);
+    setView("addLesson");
+  }
+
   function startEditLesson(lesson) {
     setLessonDate(lesson.date); setLessonDuration(lesson.duration);
     setLessonExercises(lesson.exercises); setLessonRoutes(lesson.routes);
@@ -219,11 +234,21 @@ export default function App() {
 
   function saveLesson() {
     const lesson = { id: editLesson||Date.now(), date: lessonDate, duration: lessonDuration, exercises: lessonExercises, routes: lessonRoutes, notes: lessonNotes };
-    updateStudents(prev => prev.map(s => {
+    const nextStudents = students.map(s => {
       if (s.id !== selectedStudent.id) return s;
       const lessons = editLesson ? s.lessons.map(l => l.id===editLesson ? lesson : l) : [...s.lessons, lesson];
-      const updated = { ...s, lessons }; setSelectedStudent(updated); return updated;
-    }));
+      return { ...s, lessons };
+    });
+    setStudents(nextStudents);
+    setSelectedStudent(nextStudents.find(s => s.id === selectedStudent.id));
+    if (convertingSchedId) {
+      const nextSched = schedule.filter(e => e.id !== convertingSchedId);
+      setSchedule(nextSched);
+      persist(nextStudents, exercises, routes, nextSched);
+      setConvertingSchedId(null);
+    } else {
+      persist(nextStudents, exercises, routes);
+    }
     setView("student");
   }
 
@@ -242,6 +267,27 @@ export default function App() {
   }
 
   const StatusBadge = () => saving ? <div style={s.savingBadge}>💾 Αποθήκευση...</div> : null;
+
+  if (!unlocked) return (
+    <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
+      <div style={{textAlign:"center", maxWidth:280, width:"90%"}}>
+        <div style={{fontSize:48}}>🔒</div>
+        <div style={{fontSize:18, fontWeight:700, color:"#1a237e", marginTop:12}}>Οδηγώ & Μαθαίνω</div>
+        <div style={{fontSize:13, color:"#888", marginTop:6, marginBottom:16}}>Εισάγετε τον κωδικό πρόσβασης</div>
+        <input type="password" inputMode="numeric" autoFocus
+          style={{...s.input, textAlign:"center", fontSize:22, letterSpacing:6}}
+          value={pinInput}
+          onChange={e => { setPinInput(e.target.value); setPinError(false); }}
+          onKeyDown={e => { if (e.key === "Enter") { if (pinInput === APP_PIN) setUnlocked(true); else setPinError(true); } }}
+          placeholder="••••"/>
+        {pinError && <div style={{color:"#c62828", fontSize:13, fontWeight:600, marginTop:8}}>Λάθος κωδικός</div>}
+        <button style={{...s.btnPrimary, marginTop:16, width:"100%"}}
+          onClick={() => { if (pinInput === APP_PIN) setUnlocked(true); else setPinError(true); }}>
+          Είσοδος
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) return (
     <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
@@ -442,6 +488,11 @@ export default function App() {
 
   if (view === "addLesson") {
     function handleBack() {
+      if (convertingSchedId) {
+        setConvertingSchedId(null);
+        setView("schedule");
+        return;
+      }
       if (editLesson) {
         setConfirmDialog({
           message: "Να αποθηκευτούν οι αλλαγές;",
@@ -562,6 +613,9 @@ export default function App() {
                     <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
+                {studentExists && (
+                  <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
+                )}
               </div>
             );
           })}
@@ -837,6 +891,7 @@ const s = {
   progressLbl:{fontSize:12,fontWeight:600,color:"#888"},
   progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
+  convertBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
