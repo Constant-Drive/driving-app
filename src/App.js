@@ -891,7 +891,7 @@ const s = {
   progressLbl:{fontSize:12,fontWeight:600,color:"#888"},
   progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
-  convertBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
+  convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
