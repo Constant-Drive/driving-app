@@ -3,7 +3,6 @@ import { db } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const DATA_DOC = doc(db, "app", "data");
-const APP_PIN = "0300"; // ← Άλλαξε αυτόν τον κωδικό στον δικό σου
 
 const DEFAULT_EXERCISES = [
   "Εκκίνηση / Στάση","Στροφές","Παρκάρισμα παράλληλο","Παρκάρισμα κάθετο",
@@ -65,9 +64,6 @@ export default function App() {
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
-  const [unlocked, setUnlocked] = useState(false);
-  const [pinInput, setPinInput] = useState("");
-  const [pinError, setPinError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState("home");
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -268,27 +264,6 @@ export default function App() {
   }
 
   const StatusBadge = () => saving ? <div style={s.savingBadge}>💾 Αποθήκευση...</div> : null;
-
-  if (!unlocked) return (
-    <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
-      <div style={{textAlign:"center", maxWidth:280, width:"90%"}}>
-        <div style={{fontSize:48}}>🔒</div>
-        <div style={{fontSize:18, fontWeight:700, color:"#1a237e", marginTop:12}}>Οδηγώ & Μαθαίνω</div>
-        <div style={{fontSize:13, color:"#888", marginTop:6, marginBottom:16}}>Εισάγετε τον κωδικό πρόσβασης</div>
-        <input type="password" inputMode="numeric" autoFocus
-          style={{...s.input, textAlign:"center", fontSize:22, letterSpacing:6}}
-          value={pinInput}
-          onChange={e => { setPinInput(e.target.value); setPinError(false); }}
-          onKeyDown={e => { if (e.key === "Enter") { if (pinInput === APP_PIN) setUnlocked(true); else setPinError(true); } }}
-          placeholder="••••"/>
-        {pinError && <div style={{color:"#c62828", fontSize:13, fontWeight:600, marginTop:8}}>Λάθος κωδικός</div>}
-        <button style={{...s.btnPrimary, marginTop:16, width:"100%"}}
-          onClick={() => { if (pinInput === APP_PIN) setUnlocked(true); else setPinError(true); }}>
-          Είσοδος
-        </button>
-      </div>
-    </div>
-  );
 
   if (loading) return (
     <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
