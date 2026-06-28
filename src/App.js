@@ -242,7 +242,7 @@ export default function App() {
     setStudents(nextStudents);
     setSelectedStudent(nextStudents.find(s => s.id === selectedStudent.id));
     if (convertingSchedId) {
-      const nextSched = schedule.filter(e => e.id !== convertingSchedId);
+      const nextSched = schedule.map(e => e.id === convertingSchedId ? { ...e, converted: true } : e);
       setSchedule(nextSched);
       persist(nextStudents, exercises, routes, nextSched);
       setConvertingSchedId(null);
@@ -596,7 +596,7 @@ export default function App() {
           {dayEntries.map(e => {
             const studentExists = students.some(x => String(x.id) === String(e.studentId));
             return (
-              <div key={e.id} style={{...s.lessonCard, opacity: isPastDay ? 0.6 : 1}}>
+              <div key={e.id} style={{...s.lessonCard, opacity: (isPastDay || e.converted) ? 0.55 : 1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
                   <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
                     <div style={s.schedTimeBig}>{e.time}</div>
@@ -613,8 +613,11 @@ export default function App() {
                     <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
-                {studentExists && (
+                {studentExists && !e.converted && (
                   <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
+                )}
+                {e.converted && (
+                  <div style={s.convertedTag}>✓ Καταχωρήθηκε ως μάθημα</div>
                 )}
               </div>
             );
@@ -892,6 +895,7 @@ const s = {
   progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
   convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
+  convertedTag:{color:"#2e7d32",fontSize:13,fontWeight:700,marginTop:4},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
