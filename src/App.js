@@ -881,7 +881,7 @@ const s = {
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
   todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
-  todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
+  todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1.5px solid #2e7d32",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer"},
   row2:{display:"flex",gap:10},
   nextCard:{background:"linear-gradient(135deg,#1565c0,#1976d2)",borderRadius:14,padding:"14px 16px",color:"white",cursor:"pointer",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
   nextLabel:{fontSize:12,color:"rgba(255,255,255,0.85)",fontWeight:600},
@@ -891,7 +891,7 @@ const s = {
   progressLbl:{fontSize:12,fontWeight:600,color:"#888"},
   progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
-  convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
+  convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",width:"100%",marginTop:4},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
