@@ -83,6 +83,7 @@ export default function App() {
   const [newStudentJob, setNewStudentJob] = useState("");
   const [newStudentNotes, setNewStudentNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAddMenu, setShowAddMenu] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [lessonDate, setLessonDate] = useState(today());
   const [lessonDuration, setLessonDuration] = useState(90);
@@ -333,8 +334,15 @@ export default function App() {
           <div style={s.searchBox}>
             <span style={s.searchIcon}>🔍</span>
             <input style={{...s.searchInput, paddingRight: searchQuery ? 28 : 0}} placeholder="Αναζήτηση μαθητή..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}/>
+            {searchQuery && <button style={s.searchClearInline} onClick={() => setSearchQuery("")}>✕</button>}
+            <button style={s.searchAddBtn} onClick={() => setShowAddMenu(v => !v)}>{showAddMenu ? "✕" : "＋"}</button>
           </div>
-          {searchQuery && <button style={s.searchClear} onClick={() => setSearchQuery("")}>✕</button>}
+          {showAddMenu && (
+            <div style={s.addMenu}>
+              <button style={s.addMenuItem} onClick={() => { setShowAddMenu(false); startAddStudent("new"); }}>+ Νέος Μαθητής</button>
+              <button style={s.addMenuItem} onClick={() => { setShowAddMenu(false); startAddStudent("retrain"); }}>+ Μετεκπαίδευση</button>
+            </div>
+          )}
         </div>
         {!searchQuery && (() => {
           const nowStr = today() + "T" + new Date().toTimeString().slice(0,5);
@@ -353,9 +361,16 @@ export default function App() {
             </div>
           );
         })()}
-        {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πρόσθεσε τον πρώτο σου μαθητή παρακάτω</div></div>}
+        {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πάτησε το ＋ στην μπάρα αναζήτησης για να προσθέσεις μαθητή</div></div>}
         {searchQuery && students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-          <div style={s.empty}><div style={{fontSize:36}}>🔍</div><div style={s.emptyText}>Δεν βρέθηκε μαθητής</div></div>
+          <div style={s.empty}>
+            <div style={{fontSize:36}}>🔍</div>
+            <div style={s.emptyText}>Δεν βρέθηκε μαθητής</div>
+            <div style={{display:"flex", gap:8, marginTop:14, justifyContent:"center"}}>
+              <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("new")}>+ Νέος Μαθητής</button>
+              <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("retrain")}>+ Μετεκπαίδευση</button>
+            </div>
+          </div>
         )}
         {students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name, 'el')).map(st => (
           <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
@@ -371,8 +386,6 @@ export default function App() {
             <span style={s.chevron}>›</span>
           </div>
         ))}
-        <button style={s.fab} onClick={() => startAddStudent("new")}>+ Νέος Μαθητής</button>
-        <button style={s.fabSecondary} onClick={() => startAddStudent("retrain")}>+ Μετεκπαίδευση</button>
         {students.length > 0 && (
           <div style={s.totalBox}>
             <span style={s.totalLbl}>Σύνολο μαθητών</span>
@@ -823,6 +836,10 @@ const s = {
   searchBox:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 14px",gap:8,boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   searchIcon:{fontSize:16,flexShrink:0}, searchInput:{flex:1,border:"none",outline:"none",fontSize:15,fontFamily:"inherit",background:"transparent",minWidth:0},
   searchClear:{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",fontWeight:700,padding:0},
+  searchClearInline:{background:"none",border:"none",color:"#aaa",fontSize:15,cursor:"pointer",padding:"0 2px",fontWeight:700,flexShrink:0},
+  searchAddBtn:{background:"#1a237e",color:"white",border:"none",borderRadius:8,width:32,height:32,fontSize:18,fontWeight:700,cursor:"pointer",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",marginLeft:4},
+  addMenu:{position:"absolute",top:"100%",right:0,marginTop:6,background:"white",borderRadius:12,boxShadow:"0 4px 16px rgba(0,0,0,0.18)",padding:6,zIndex:50,display:"flex",flexDirection:"column",gap:4,minWidth:200},
+  addMenuItem:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"12px 14px",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"},
   overlay:{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000},
   dialog:{background:"white",borderRadius:18,padding:"28px 24px",maxWidth:320,width:"90%",textAlign:"center",boxShadow:"0 8px 32px rgba(0,0,0,0.2)"},
   dialogIcon:{fontSize:40,marginBottom:12}, dialogMsg:{fontSize:16,color:"#333",fontWeight:600,marginBottom:24,lineHeight:1.4},
