@@ -13,7 +13,11 @@ const DEFAULT_ROUTES = [
   "Κέντρο πόλης","Αυτοκινητόδρομος","Παραλιακή","Ορεινή διαδρομή","Σχολικές ζώνες",
 ].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 
-function today() { return new Date().toISOString().slice(0, 10); }
+function today() {
+  const d = new Date();
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+}
 
 // Normalize old string-array data to {name, reqNew, reqRetrain} objects
 function normalizeList(arr) {
