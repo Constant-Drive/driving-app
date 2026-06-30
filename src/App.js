@@ -62,6 +62,8 @@ export default function App() {
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
   const [schedStudentId, setSchedStudentId] = useState("");
+  const [schedDuration, setSchedDuration] = useState(90);
+  const [schedNotes, setSchedNotes] = useState("");
   const [schedViewDate, setSchedViewDate] = useState(today());
   const [showSchedForm, setShowSchedForm] = useState(false);
   const [editSchedId, setEditSchedId] = useState(null);
@@ -134,7 +136,7 @@ export default function App() {
     const stu = students.find(x => String(x.id) === String(schedStudentId));
     if (editSchedId) {
       updateSchedule(schedule.map(e => e.id === editSchedId
-        ? { ...e, date: schedDate, time: schedTime, studentId: schedStudentId, studentName: stu ? stu.name : e.studentName }
+        ? { ...e, date: schedDate, time: schedTime, studentId: schedStudentId, studentName: stu ? stu.name : e.studentName, duration: schedDuration, notes: schedNotes }
         : e));
     } else {
       const entry = {
@@ -143,22 +145,25 @@ export default function App() {
         time: schedTime,
         studentId: schedStudentId,
         studentName: stu ? stu.name : "—",
+        duration: schedDuration,
+        notes: schedNotes,
       };
       updateSchedule([...schedule, entry]);
     }
     setSchedViewDate(schedDate);
-    setSchedDate(""); setSchedTime(""); setSchedStudentId("");
+    setSchedDate(""); setSchedTime(""); setSchedStudentId(""); setSchedDuration(90); setSchedNotes("");
     setShowSchedForm(false); setEditSchedId(null);
   }
 
   function startEditSchedule(e) {
     setSchedDate(e.date); setSchedTime(e.time); setSchedStudentId(e.studentId);
+    setSchedDuration(e.duration || 90); setSchedNotes(e.notes || "");
     setEditSchedId(e.id); setShowSchedForm(true);
   }
 
   function closeSchedForm() {
     setShowSchedForm(false); setEditSchedId(null);
-    setSchedDate(""); setSchedTime(""); setSchedStudentId("");
+    setSchedDate(""); setSchedTime(""); setSchedStudentId(""); setSchedDuration(90); setSchedNotes("");
   }
 
   function deleteScheduleEntry(id) {
@@ -574,6 +579,11 @@ export default function App() {
                   <option key={st.id} value={st.id}>{st.name}{st.type === "retrain" ? " (Μετεκπ.)" : ""}</option>
                 ))}
               </select>
+              <label style={s.label}>Διάρκεια (λεπτά)</label>
+              <input type="number" style={s.input} value={schedDuration} onChange={e => setSchedDuration(Number(e.target.value))}/>
+              {schedTime && <div style={{fontSize:13, color:"#888", marginTop:4}}>Λήξη: {addMinutesToTime(schedTime, schedDuration)}</div>}
+              <label style={s.label}>Σημειώσεις</label>
+              <textarea style={{...s.input, height:60, resize:"vertical"}} placeholder="π.χ. Συνάντηση στο πάρκινγκ..." value={schedNotes} onChange={e => setSchedNotes(e.target.value)}/>
               <div style={{display:"flex", gap:10, marginTop:12}}>
                 <button style={{...s.btnPrimary, marginTop:0}} onClick={addScheduleEntry}>{editSchedId ? "Αποθήκευση" : "Προσθήκη"}</button>
                 <button style={{...s.dialogCancel, flex:1}} onClick={closeSchedForm}>Ακύρωση</button>
@@ -591,7 +601,10 @@ export default function App() {
               <div key={e.id} style={{...s.lessonCard, opacity: (isPastDay || e.converted) ? 0.55 : 1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
                   <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
-                    <div style={s.schedTimeBig}>{e.time}</div>
+                    <div style={{display:"flex", flexDirection:"column", alignItems:"center", minWidth:52, flexShrink:0}}>
+                      <div style={s.schedTimeBig}>{e.time}</div>
+                      {e.duration && <div style={s.schedEndTime}>έως {addMinutesToTime(e.time, e.duration)}</div>}
+                    </div>
                     <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
                       <span>👤</span>
                       <span style={studentExists ? s.schedStudent : s.schedStudentGone}
@@ -605,6 +618,7 @@ export default function App() {
                     <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
+                {e.notes && <div style={s.lessonNotes}>{e.notes}</div>}
                 {studentExists && !e.converted && (
                   <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
                 )}
@@ -787,6 +801,15 @@ function EditableList({ items, onUpdate }) {
   );
 }
 
+function addMinutesToTime(time, mins) {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + (mins || 0);
+  const nh = Math.floor((total % 1440) / 60);
+  const nm = total % 60;
+  return String(nh).padStart(2,"0") + ":" + String(nm).padStart(2,"0");
+}
+
 function formatDate(d) {
   const [y,m,day] = d.split("-");
   const months = ["Ιαν","Φεβ","Μαρ","Απρ","Μαΐ","Ιουν","Ιουλ","Αυγ","Σεπ","Οκτ","Νοε","Δεκ"];
@@ -874,7 +897,8 @@ const s = {
   reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   schedTime:{fontSize:14,color:"#1565c0",fontWeight:700,marginTop:3},
-  schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0",minWidth:52,flexShrink:0},
+  schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0"},
+  schedEndTime:{fontSize:11,color:"#aaa",fontWeight:600,marginTop:1},
   dayNav:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 12px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,width:38,height:38,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0},
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
