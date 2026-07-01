@@ -159,6 +159,10 @@ export default function App() {
     setSchedDate(e.date); setSchedTime(e.time); setSchedStudentId(e.studentId);
     setSchedDuration(e.duration || 90); setSchedNotes(e.notes || "");
     setEditSchedId(e.id); setShowSchedForm(true);
+    setTimeout(() => {
+      const el = document.getElementById('sched-form');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   }
 
   function closeSchedForm() {
@@ -560,7 +564,7 @@ export default function App() {
 
           {/* New appointment form (collapsible) */}
           {showSchedForm && (
-            <div style={s.formCard}>
+            <div id="sched-form" style={s.formCard}>
               <div style={s.sectionTitle}>{editSchedId ? "Επεξεργασία Ραντεβού" : "Νέο Ραντεβού"}</div>
               <div style={s.row2}>
                 <div style={{flex:1, minWidth:0}}>
