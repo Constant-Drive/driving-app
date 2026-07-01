@@ -554,7 +554,7 @@ export default function App() {
               <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", justifyContent:"center"}}>
                 {isToday && <span style={s.todayTag}>Σήμερα</span>}
                 {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length} μαθ.</span>}
-                {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration || 90) / 90) * 14, 0))}€</span>}
+                {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0))}€</span>}
               </div>
             </div>
             <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>›</button>
@@ -608,7 +608,7 @@ export default function App() {
                   <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
                     <div style={{display:"flex", flexDirection:"column", alignItems:"center", minWidth:52, flexShrink:0}}>
                       <div style={s.schedTimeBig}>{e.time}</div>
-                      {e.duration && <div style={s.schedEndTime}>έως {addMinutesToTime(e.time, e.duration)}</div>}
+                      {e.duration > 0 && <div style={s.schedEndTime}>έως {addMinutesToTime(e.time, e.duration)}</div>}
                     </div>
                     <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
                       <span>👤</span>
