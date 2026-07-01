@@ -554,7 +554,7 @@ export default function App() {
               <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", justifyContent:"center"}}>
                 {isToday && <span style={s.todayTag}>Σήμερα</span>}
                 {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length} μαθ.</span>}
-                {dayEntries.length > 0 && <span style={s.feeBadge}>{dayEntries.length * 14}€</span>}
+                {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration || 90) / 90) * 14, 0))}€</span>}
               </div>
             </div>
             <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>›</button>
