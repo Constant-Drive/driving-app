@@ -642,8 +642,20 @@ export default function App() {
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
       <div style={s.container}>
-        <div style={s.formCard}><div style={s.sectionTitle}>🏁 Δοκιμασίες</div><EditableList items={exercises} onUpdate={updateExercises}/></div>
-        <div style={s.formCard}><div style={s.sectionTitle}>🗺️ Διαδρομές</div><EditableList items={routes} onUpdate={updateRoutes}/></div>
+        <div style={s.formCard}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+            <div style={{...s.sectionTitle, marginBottom:0}}>🏁 Δοκιμασίες</div>
+            <button style={s.sortBtn} onClick={() => updateExercises([...exercises].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
+          </div>
+          <EditableList items={exercises} onUpdate={updateExercises}/>
+        </div>
+        <div style={s.formCard}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+            <div style={{...s.sectionTitle, marginBottom:0}}>🗺️ Διαδρομές</div>
+            <button style={s.sortBtn} onClick={() => updateRoutes([...routes].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
+          </div>
+          <EditableList items={routes} onUpdate={updateRoutes}/>
+        </div>
       </div>
     </div>
   );
@@ -909,6 +921,7 @@ const s = {
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
+  sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1.5px solid #a5d6a7",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",alignSelf:"center"},
   row2:{display:"flex",gap:10},
