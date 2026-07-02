@@ -13,6 +13,17 @@ const DEFAULT_ROUTES = [
   "Κέντρο πόλης","Αυτοκινητόδρομος","Παραλιακή","Ορεινή διαδρομή","Σχολικές ζώνες",
 ].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 
+const DEFAULT_PHRASES = [
+  "Έλεγξε τους καθρέφτες",
+  "Βάλε φλας",
+  "Μείωσε ταχύτητα",
+  "Κράτα αποστάσεις",
+  "Έλεγξε τυφλό σημείο",
+  "Προτεραιότητα",
+  "Χέρια στο τιμόνι",
+  "Πρόσεξε τα σήματα",
+];
+
 function today() {
   const d = new Date();
   const off = d.getTimezoneOffset();
@@ -59,6 +70,10 @@ function daysAgo(dateStr) {
 export default function App() {
   const [students, setStudents] = useState([]);
   const [schedule, setSchedule] = useState([]);
+  const [phrases, setPhrases] = useState(DEFAULT_PHRASES);
+  const [newPhrase, setNewPhrase] = useState("");
+  const [soundMode, setSoundMode] = useState("voice"); // "both" | "beep" | "voice"
+  const [soundType, setSoundType] = useState("beep"); // beep | double | alarm | bell | success | horn
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
   const [schedStudentId, setSchedStudentId] = useState("");
@@ -106,6 +121,7 @@ export default function App() {
           if (data.exercises) setExercises(normalizeList(data.exercises));
           if (data.routes) setRoutes(normalizeList(data.routes));
           if (data.schedule) setSchedule(data.schedule);
+          if (data.phrases) setPhrases(data.phrases);
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -113,9 +129,9 @@ export default function App() {
     load();
   }, []);
 
-  async function persist(s, ex, rt, sch) {
+  async function persist(s, ex, rt, sch, phr) {
     setSaving(true);
-    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt, schedule: sch !== undefined ? sch : schedule }); }
+    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt, schedule: sch !== undefined ? sch : schedule, phrases: phr !== undefined ? phr : phrases }); }
     catch(e) { console.error(e); }
     setSaving(false);
   }
@@ -130,6 +146,60 @@ export default function App() {
   function updateExercises(newEx) { setExercises(newEx); persist(students, newEx, routes); }
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
   function updateSchedule(newSch) { setSchedule(newSch); persist(students, exercises, routes, newSch); }
+  function updatePhrases(newPhr) { setPhrases(newPhr); persist(students, exercises, routes, undefined, newPhr); }
+
+  function speak(text) {
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "el-GR";
+      u.rate = 1.0;
+      window.speechSynthesis.speak(u);
+    } catch (e) { console.error(e); }
+  }
+
+  function playTone(ctx, freq, start, dur, type = "sine", vol = 0.4) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+    osc.start(ctx.currentTime + start);
+    osc.stop(ctx.currentTime + start + dur);
+  }
+
+  function beep(typeOverride) {
+    const t = typeOverride || soundType;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      switch (t) {
+        case "beep":
+          playTone(ctx, 880, 0, 0.35); break;
+        case "double":
+          playTone(ctx, 880, 0, 0.15); playTone(ctx, 880, 0.22, 0.15); break;
+        case "alarm":
+          playTone(ctx, 700, 0, 0.18, "square", 0.3); playTone(ctx, 500, 0.2, 0.18, "square", 0.3); playTone(ctx, 700, 0.4, 0.18, "square", 0.3); break;
+        case "bell":
+          playTone(ctx, 1320, 0, 0.5, "sine", 0.35); playTone(ctx, 1760, 0.02, 0.4, "sine", 0.15); break;
+        case "success":
+          playTone(ctx, 523, 0, 0.12); playTone(ctx, 659, 0.13, 0.12); playTone(ctx, 784, 0.26, 0.25); break;
+        case "horn":
+          playTone(ctx, 300, 0, 0.5, "sawtooth", 0.35); playTone(ctx, 375, 0, 0.5, "sawtooth", 0.25); break;
+        default:
+          playTone(ctx, 880, 0, 0.35);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  function playFeedback(text) {
+    if (soundMode === "beep") { beep(); return; }
+    if (soundMode === "voice") { speak(text); return; }
+    // both: beep first, then speak
+    beep();
+    setTimeout(() => speak(text), 650);
+  }
 
   function addScheduleEntry() {
     if (!schedDate || !schedTime || !schedStudentId) return;
@@ -314,6 +384,7 @@ export default function App() {
         <StatusBadge />
         <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
           <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+          <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
           <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
         </div>
       </div></div>
@@ -638,6 +709,61 @@ export default function App() {
     );
   }
 
+  if (view === "sounds") return (
+    <div style={s.page}>
+      <div style={s.header}><div style={s.headerInner}>
+        <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
+        <div style={{flex:1}}><div style={s.appTitle}>🔊 Φωνητικές Οδηγίες</div></div>
+      </div></div>
+      <div style={s.container}>
+        <div style={s.formCard}>
+          <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:8}}>Λειτουργία:</div>
+          <div style={{display:"flex", gap:6}}>
+            <button style={soundMode === "both" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("both")}>🔔+🗣️ Ήχος & Φωνή</button>
+            <button style={soundMode === "beep" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("beep")}>🔔 Ήχος</button>
+            <button style={soundMode === "voice" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("voice")}>🗣️ Φωνή</button>
+          </div>
+          {soundMode !== "voice" && (
+            <div style={{marginTop:12}}>
+              <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:8}}>Επιλογή ήχου (πάτησε για ακρόαση):</div>
+              <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+                {[["beep","🔊 Μπιπ"],["double","🔊 Διπλό μπιπ"],["alarm","🚨 Συναγερμός"],["bell","🔔 Καμπανάκι"],["success","✅ Επιτυχία"],["horn","📯 Κόρνα"]].map(([val, lbl]) => (
+                  <button key={val}
+                    style={soundType === val ? s.soundTypeActive : s.soundTypeInactive}
+                    onClick={() => { setSoundType(val); beep(val); }}
+                  >{lbl}</button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{fontSize:13, color:"#888"}}>Πάτησε ένα κουμπί για να εκφωνηθεί η οδηγία στον μαθητή.</div>
+        <div style={s.soundGrid}>
+          {phrases.map((p, i) => (
+            <button key={i} style={s.soundBtn} onClick={() => playFeedback(p)}>
+              🔊 {p}
+            </button>
+          ))}
+        </div>
+        <div style={s.formCard}>
+          <div style={s.sectionTitle}>Διαχείριση φράσεων</div>
+          {phrases.map((p, i) => (
+            <div key={i} style={s.listRow}>
+              <span style={{...s.listItem, flex:1}}>{p}</span>
+              <button style={s.removeBtn} onClick={() => updatePhrases(phrases.filter((_, idx) => idx !== i))}>✕</button>
+            </div>
+          ))}
+          <div style={s.addRow}>
+            <input style={{...s.input, flex:1}} placeholder="Νέα φράση..." value={newPhrase}
+              onChange={e => setNewPhrase(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && newPhrase.trim()) { updatePhrases([...phrases, newPhrase.trim()]); setNewPhrase(""); } }}/>
+            <button style={s.addBtn} onClick={() => { if (newPhrase.trim()) { updatePhrases([...phrases, newPhrase.trim()]); setNewPhrase(""); } }}>+ Προσθήκη</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (view === "settings") return (
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
@@ -922,6 +1048,12 @@ const s = {
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
+  soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
+  soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"18px 12px",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",textAlign:"center",lineHeight:1.3},
+  modeActive:{flex:1,background:"#1a237e",color:"white",border:"none",borderRadius:8,padding:"9px 6px",fontSize:11,fontWeight:700,cursor:"pointer"},
+  modeInactive:{flex:1,background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:8,padding:"9px 6px",fontSize:11,fontWeight:600,cursor:"pointer"},
+  soundTypeActive:{background:"#1565c0",color:"white",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
+  soundTypeInactive:{background:"#f0f0f0",color:"#666",border:"1px solid #e0e0e0",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer"},
   todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1.5px solid #a5d6a7",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",alignSelf:"center"},
   row2:{display:"flex",gap:10},
