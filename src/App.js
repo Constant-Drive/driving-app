@@ -80,6 +80,7 @@ export default function App() {
   const [phrases, setPhrases] = useState(DEFAULT_PHRASES);
   const [newPhrase, setNewPhrase] = useState("");
   const [editPhraseIdx, setEditPhraseIdx] = useState(null);
+  const [showPhraseManager, setShowPhraseManager] = useState(false);
   const [editPhraseText, setEditPhraseText] = useState("");
   const [editPhraseMode, setEditPhraseMode] = useState("voice");
   const [editPhraseSound, setEditPhraseSound] = useState("horn");
@@ -757,14 +758,18 @@ export default function App() {
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}>
         <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
-        <div style={{flex:1}}><div style={s.appTitle}>🔊 Φωνητικές Οδηγίες</div></div>
+        <div style={{flex:1, display:"flex", alignItems:"center", gap:8}}>
+          <span style={{fontSize:22}}>🔊</span>
+          <div style={{...s.appTitle, lineHeight:1.1}}>Φωνητικές<br/>Οδηγίες</div>
+        </div>
       </div></div>
       <div style={s.container}>
         <div style={{fontSize:13, color:"#888"}}>Πάτησε ένα κουμπί για ήχο/εκφώνηση προς τον μαθητή.</div>
         <div style={s.soundGrid}>
           {phrases.map((p, i) => (
             <button key={i} style={s.soundBtn} onClick={() => playFeedback(p)}>
-              {p.mode === "beep" ? "🔔" : p.mode === "both" ? "🔔🗣️" : "🗣️"} {p.text}
+              <span style={s.soundBtnIcon}>{p.mode === "beep" ? "🔔" : p.mode === "both" ? "🔔🗣️" : "🗣️"}</span>
+              <span style={s.soundBtnText}>{p.text}</span>
             </button>
           ))}
         </div>
@@ -798,8 +803,11 @@ export default function App() {
           </div>
         )}
 
+        <button style={s.manageBtn} onClick={() => setShowPhraseManager(v => !v)}>
+          ⚙️ {showPhraseManager ? "Κλείσιμο διαχείρισης" : "Διαχείριση φράσεων"}
+        </button>
+        {showPhraseManager && (
         <div style={s.formCard}>
-          <div style={s.sectionTitle}>Διαχείριση φράσεων</div>
           {phrases.map((p, i) => (
             <div key={i} style={s.listRow}>
               <span style={{...s.listItem, flex:1}}>{p.text}</span>
@@ -816,6 +824,7 @@ export default function App() {
             <button style={s.addBtn} onClick={() => { if (newPhrase.trim()) { updatePhrases([...phrases, { text: newPhrase.trim(), mode: "voice", sound: "horn" }]); setNewPhrase(""); } }}>+ Προσθήκη</button>
           </div>
         </div>
+        )}
       </div>
     </div>
     );
@@ -1106,7 +1115,10 @@ const s = {
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
-  soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"18px 12px",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",textAlign:"center",lineHeight:1.3},
+  soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"12px 10px",cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,height:90},
+  soundBtnIcon:{fontSize:18},
+  manageBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
+  soundBtnText:{fontSize:13,fontWeight:700,textAlign:"center",lineHeight:1.25,display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical",overflow:"hidden"},
   modeActive:{flex:1,background:"#1a237e",color:"white",border:"none",borderRadius:8,padding:"9px 6px",fontSize:11,fontWeight:700,cursor:"pointer"},
   modeInactive:{flex:1,background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:8,padding:"9px 6px",fontSize:11,fontWeight:600,cursor:"pointer"},
   soundTypeActive:{background:"#1565c0",color:"white",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
