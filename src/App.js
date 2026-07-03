@@ -22,7 +22,14 @@ const DEFAULT_PHRASES = [
   "Προτεραιότητα",
   "Χέρια στο τιμόνι",
   "Πρόσεξε τα σήματα",
-];
+].map(t => ({ text: t, mode: "voice", sound: "horn" }));
+
+function normalizePhrases(arr) {
+  if (!arr) return [];
+  return arr.map(p => typeof p === "string"
+    ? { text: p, mode: "voice", sound: "horn" }
+    : { text: p.text, mode: p.mode || "voice", sound: p.sound || "horn" });
+}
 
 function today() {
   const d = new Date();
@@ -72,8 +79,10 @@ export default function App() {
   const [schedule, setSchedule] = useState([]);
   const [phrases, setPhrases] = useState(DEFAULT_PHRASES);
   const [newPhrase, setNewPhrase] = useState("");
-  const [soundMode, setSoundMode] = useState("voice"); // "both" | "beep" | "voice"
-  const [soundType, setSoundType] = useState("beep"); // beep | double | alarm | bell | success | horn
+  const [editPhraseIdx, setEditPhraseIdx] = useState(null);
+  const [editPhraseText, setEditPhraseText] = useState("");
+  const [editPhraseMode, setEditPhraseMode] = useState("voice");
+  const [editPhraseSound, setEditPhraseSound] = useState("horn");
   const [schedDate, setSchedDate] = useState("");
   const [schedTime, setSchedTime] = useState("");
   const [schedStudentId, setSchedStudentId] = useState("");
@@ -121,7 +130,7 @@ export default function App() {
           if (data.exercises) setExercises(normalizeList(data.exercises));
           if (data.routes) setRoutes(normalizeList(data.routes));
           if (data.schedule) setSchedule(data.schedule);
-          if (data.phrases) setPhrases(data.phrases);
+          if (data.phrases) setPhrases(normalizePhrases(data.phrases));
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -170,35 +179,55 @@ export default function App() {
     osc.stop(ctx.currentTime + start + dur);
   }
 
+  function playSiren(ctx, start, dur, fLow, fHigh, vol) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = "square";
+    osc.frequency.setValueAtTime(fLow, ctx.currentTime + start);
+    osc.frequency.linearRampToValueAtTime(fHigh, ctx.currentTime + start + dur/2);
+    osc.frequency.linearRampToValueAtTime(fLow, ctx.currentTime + start + dur);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + start);
+    gain.gain.setValueAtTime(vol, ctx.currentTime + start + dur - 0.05);
+    gain.gain.linearRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+    osc.start(ctx.currentTime + start);
+    osc.stop(ctx.currentTime + start + dur);
+  }
+
+  const SOUND_DUR = { horn: 800, hornDouble: 1300, siren: 1200, alarm: 1100, buzzer: 700, beeps: 900 };
+
   function beep(typeOverride) {
-    const t = typeOverride || soundType;
+    const t = typeOverride || "horn";
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       switch (t) {
-        case "beep":
-          playTone(ctx, 880, 0, 0.35); break;
-        case "double":
-          playTone(ctx, 880, 0, 0.15); playTone(ctx, 880, 0.22, 0.15); break;
-        case "alarm":
-          playTone(ctx, 700, 0, 0.18, "square", 0.3); playTone(ctx, 500, 0.2, 0.18, "square", 0.3); playTone(ctx, 700, 0.4, 0.18, "square", 0.3); break;
-        case "bell":
-          playTone(ctx, 1320, 0, 0.5, "sine", 0.35); playTone(ctx, 1760, 0.02, 0.4, "sine", 0.15); break;
-        case "success":
-          playTone(ctx, 523, 0, 0.12); playTone(ctx, 659, 0.13, 0.12); playTone(ctx, 784, 0.26, 0.25); break;
         case "horn":
-          playTone(ctx, 300, 0, 0.5, "sawtooth", 0.35); playTone(ctx, 375, 0, 0.5, "sawtooth", 0.25); break;
+          playTone(ctx, 300, 0, 0.7, "sawtooth", 0.9); playTone(ctx, 375, 0, 0.7, "sawtooth", 0.7); break;
+        case "hornDouble":
+          playTone(ctx, 300, 0, 0.45, "sawtooth", 0.9); playTone(ctx, 375, 0, 0.45, "sawtooth", 0.7);
+          playTone(ctx, 300, 0.6, 0.55, "sawtooth", 0.9); playTone(ctx, 375, 0.6, 0.55, "sawtooth", 0.7); break;
+        case "siren":
+          playSiren(ctx, 0, 1.1, 600, 1200, 0.85); break;
+        case "alarm":
+          playTone(ctx, 900, 0, 0.22, "square", 0.85); playTone(ctx, 650, 0.25, 0.22, "square", 0.85);
+          playTone(ctx, 900, 0.5, 0.22, "square", 0.85); playTone(ctx, 650, 0.75, 0.22, "square", 0.85); break;
+        case "buzzer":
+          playTone(ctx, 160, 0, 0.65, "square", 0.95); break;
+        case "beeps":
+          playTone(ctx, 1100, 0, 0.18, "square", 0.9); playTone(ctx, 1100, 0.28, 0.18, "square", 0.9); playTone(ctx, 1100, 0.56, 0.25, "square", 0.9); break;
         default:
-          playTone(ctx, 880, 0, 0.35);
+          playTone(ctx, 300, 0, 0.7, "sawtooth", 0.9);
       }
     } catch (e) { console.error(e); }
   }
 
-  function playFeedback(text) {
-    if (soundMode === "beep") { beep(); return; }
-    if (soundMode === "voice") { speak(text); return; }
-    // both: beep first, then speak
-    beep();
-    setTimeout(() => speak(text), 650);
+  function playFeedback(p) {
+    const mode = p.mode || "voice";
+    const sound = p.sound || "horn";
+    if (mode === "beep") { beep(sound); return; }
+    if (mode === "voice") { speak(p.text); return; }
+    beep(sound);
+    setTimeout(() => speak(p.text), (SOUND_DUR[sound] || 800) + 150);
   }
 
   function addScheduleEntry() {
@@ -709,60 +738,87 @@ export default function App() {
     );
   }
 
-  if (view === "sounds") return (
+  if (view === "sounds") {
+    const SOUND_OPTIONS = [["horn","📯 Κόρνα"],["hornDouble","📯 Διπλή κόρνα"],["siren","🚨 Σειρήνα"],["alarm","🚨 Συναγερμός"],["buzzer","⚡ Βομβητής"],["beeps","🔊 Τριπλό μπιπ"]];
+    const MODE_OPTIONS = [["both","🔔+🗣️ Ήχος & Φωνή"],["beep","🔔 Ήχος"],["voice","🗣️ Φωνή"]];
+    function startEditPhrase(i) {
+      const p = phrases[i];
+      setEditPhraseIdx(i); setEditPhraseText(p.text); setEditPhraseMode(p.mode || "voice"); setEditPhraseSound(p.sound || "horn");
+    }
+    function savePhrase() {
+      if (!editPhraseText.trim()) return;
+      updatePhrases(phrases.map((p, idx) => idx === editPhraseIdx
+        ? { text: editPhraseText.trim(), mode: editPhraseMode, sound: editPhraseSound }
+        : p));
+      setEditPhraseIdx(null);
+    }
+    return (
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}>
         <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
         <div style={{flex:1}}><div style={s.appTitle}>🔊 Φωνητικές Οδηγίες</div></div>
       </div></div>
       <div style={s.container}>
-        <div style={s.formCard}>
-          <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:8}}>Λειτουργία:</div>
-          <div style={{display:"flex", gap:6}}>
-            <button style={soundMode === "both" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("both")}>🔔+🗣️ Ήχος & Φωνή</button>
-            <button style={soundMode === "beep" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("beep")}>🔔 Ήχος</button>
-            <button style={soundMode === "voice" ? s.modeActive : s.modeInactive} onClick={() => setSoundMode("voice")}>🗣️ Φωνή</button>
-          </div>
-          {soundMode !== "voice" && (
-            <div style={{marginTop:12}}>
-              <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:8}}>Επιλογή ήχου (πάτησε για ακρόαση):</div>
-              <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
-                {[["beep","🔊 Μπιπ"],["double","🔊 Διπλό μπιπ"],["alarm","🚨 Συναγερμός"],["bell","🔔 Καμπανάκι"],["success","✅ Επιτυχία"],["horn","📯 Κόρνα"]].map(([val, lbl]) => (
-                  <button key={val}
-                    style={soundType === val ? s.soundTypeActive : s.soundTypeInactive}
-                    onClick={() => { setSoundType(val); beep(val); }}
-                  >{lbl}</button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <div style={{fontSize:13, color:"#888"}}>Πάτησε ένα κουμπί για να εκφωνηθεί η οδηγία στον μαθητή.</div>
+        <div style={{fontSize:13, color:"#888"}}>Πάτησε ένα κουμπί για ήχο/εκφώνηση προς τον μαθητή.</div>
         <div style={s.soundGrid}>
           {phrases.map((p, i) => (
             <button key={i} style={s.soundBtn} onClick={() => playFeedback(p)}>
-              🔊 {p}
+              {p.mode === "beep" ? "🔔" : p.mode === "both" ? "🔔🗣️" : "🗣️"} {p.text}
             </button>
           ))}
         </div>
+
+        {editPhraseIdx !== null && (
+          <div id="phrase-editor" style={s.formCard}>
+            <div style={s.sectionTitle}>Επεξεργασία φράσης</div>
+            <label style={s.label}>Κείμενο</label>
+            <input style={s.input} value={editPhraseText} onChange={e => setEditPhraseText(e.target.value)}/>
+            <label style={s.label}>Λειτουργία</label>
+            <div style={{display:"flex", gap:6}}>
+              {MODE_OPTIONS.map(([val, lbl]) => (
+                <button key={val} style={editPhraseMode === val ? s.modeActive : s.modeInactive} onClick={() => setEditPhraseMode(val)}>{lbl}</button>
+              ))}
+            </div>
+            {editPhraseMode !== "voice" && (
+              <div style={{marginTop:10}}>
+                <label style={s.label}>Ήχος (πάτησε για ακρόαση)</label>
+                <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+                  {SOUND_OPTIONS.map(([val, lbl]) => (
+                    <button key={val} style={editPhraseSound === val ? s.soundTypeActive : s.soundTypeInactive}
+                      onClick={() => { setEditPhraseSound(val); beep(val); }}>{lbl}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{display:"flex", gap:10, marginTop:14}}>
+              <button style={{...s.btnPrimary, marginTop:0}} onClick={savePhrase}>Αποθήκευση</button>
+              <button style={{...s.dialogCancel, flex:1}} onClick={() => setEditPhraseIdx(null)}>Ακύρωση</button>
+            </div>
+          </div>
+        )}
+
         <div style={s.formCard}>
           <div style={s.sectionTitle}>Διαχείριση φράσεων</div>
           {phrases.map((p, i) => (
             <div key={i} style={s.listRow}>
-              <span style={{...s.listItem, flex:1}}>{p}</span>
-              <button style={s.removeBtn} onClick={() => updatePhrases(phrases.filter((_, idx) => idx !== i))}>✕</button>
+              <span style={{...s.listItem, flex:1}}>{p.text}</span>
+              <div style={{display:"flex", gap:4, flexShrink:0}}>
+                <button style={s.editSmallBtn} onClick={() => { startEditPhrase(i); setTimeout(() => { const el = document.getElementById('phrase-editor'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'}); }, 100); }}>✏️</button>
+                <button style={s.removeBtn} onClick={() => updatePhrases(phrases.filter((_, idx) => idx !== i))}>✕</button>
+              </div>
             </div>
           ))}
           <div style={s.addRow}>
             <input style={{...s.input, flex:1}} placeholder="Νέα φράση..." value={newPhrase}
               onChange={e => setNewPhrase(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && newPhrase.trim()) { updatePhrases([...phrases, newPhrase.trim()]); setNewPhrase(""); } }}/>
-            <button style={s.addBtn} onClick={() => { if (newPhrase.trim()) { updatePhrases([...phrases, newPhrase.trim()]); setNewPhrase(""); } }}>+ Προσθήκη</button>
+              onKeyDown={e => { if (e.key === "Enter" && newPhrase.trim()) { updatePhrases([...phrases, { text: newPhrase.trim(), mode: "voice", sound: "horn" }]); setNewPhrase(""); } }}/>
+            <button style={s.addBtn} onClick={() => { if (newPhrase.trim()) { updatePhrases([...phrases, { text: newPhrase.trim(), mode: "voice", sound: "horn" }]); setNewPhrase(""); } }}>+ Προσθήκη</button>
           </div>
         </div>
       </div>
     </div>
-  );
+    );
+  }
 
   if (view === "settings") return (
     <div style={s.page}>
