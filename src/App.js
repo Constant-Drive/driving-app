@@ -411,7 +411,7 @@ export default function App() {
         <span style={s.logo}>🚗</span>
         <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
         <StatusBadge />
-        <div style={{display:"flex", gap:4, flexShrink:0}}>
+        <div style={{display:"flex", flexDirection:"column", gap:2, flexShrink:0}}>
           <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
           <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
           <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
@@ -515,7 +515,7 @@ export default function App() {
             {st.job && <div style={s.appSub}>💼 {st.job}</div>}
           </div>
           <StatusBadge />
-          <div style={{display:"flex", gap:4, flexShrink:0}}>
+          <div style={{display:"flex", flexDirection:"column", gap:2, flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
             <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
             <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
@@ -1073,7 +1073,7 @@ const s = {
   checkInactive:{background:"#f0f0f0",color:"#555",border:"1.5px solid #e0e0e0",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
   btnPrimary:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:12,padding:"13px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8,flex:1},
   btnDanger:{background:"#ffebee",color:"#c62828",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:8},
-  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:16,cursor:"pointer",borderRadius:8,padding:"4px 7px"},
+  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:16,cursor:"pointer",borderRadius:8,padding:"2px 7px",lineHeight:1.2},
   sectionTitle:{fontWeight:700,fontSize:15,color:"#1a237e",marginBottom:8},
   listRow:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #f0f0f0"},
   listItem:{fontSize:14,color:"#333"},
