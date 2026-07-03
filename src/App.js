@@ -411,7 +411,7 @@ export default function App() {
         <span style={s.logo}>🚗</span>
         <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
         <StatusBadge />
-        <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
+        <div style={{display:"flex", gap:4, flexShrink:0}}>
           <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
           <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
           <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
@@ -515,8 +515,9 @@ export default function App() {
             {st.job && <div style={s.appSub}>💼 {st.job}</div>}
           </div>
           <StatusBadge />
-          <div style={{display:"flex", flexDirection:"column", gap:4, flexShrink:0}}>
+          <div style={{display:"flex", gap:4, flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+            <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
             <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
           </div>
         </div></div>
