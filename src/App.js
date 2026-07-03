@@ -408,16 +408,20 @@ export default function App() {
 
   if (view === "home") return (
     <div style={s.page}>
-      <div style={s.header}><div style={s.headerInner}>
-        <span style={s.logo}>🚗</span>
-        <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
-        <StatusBadge />
-        <div style={{display:"flex", flexDirection:"column", gap:2, flexShrink:0}}>
-          <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-          <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
-          <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
+      <div style={s.header}>
+        <div style={{maxWidth:600, margin:"0 auto"}}>
+          <div style={{display:"flex", justifyContent:"flex-end", gap:10, marginBottom:6}}>
+            <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+            <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
+            <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
+          </div>
+          <div style={{display:"flex", alignItems:"center", gap:14}}>
+            <span style={s.logo}>🚗</span>
+            <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
+            <StatusBadge />
+          </div>
         </div>
-      </div></div>
+      </div>
       <div style={s.container}>
         <div style={{position:"relative"}}>
           <div style={s.searchBox}>
@@ -508,20 +512,26 @@ export default function App() {
     const sorted = [...st.lessons].sort((a,b) => b.date.localeCompare(a.date));
     return (
       <div style={s.page}>
-        <div style={s.header}><div style={s.headerInner}>
-          <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
-          <div style={{flex:1}}>
-            <div style={s.appTitle}>{st.name}</div>
-            {st.phone && <div style={s.appSub}>{st.phone}</div>}
-            {st.job && <div style={s.appSub}>💼 {st.job}</div>}
+        <div style={s.header}>
+          <div style={{maxWidth:600, margin:"0 auto"}}>
+            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+              <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
+              <div style={{display:"flex", gap:10}}>
+                <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
+                <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
+                <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
+              </div>
+            </div>
+            <div style={{display:"flex", alignItems:"center", gap:14}}>
+              <div style={{flex:1}}>
+                <div style={s.appTitle}>{st.name}</div>
+                {st.phone && <div style={s.appSub}>{st.phone}</div>}
+                {st.job && <div style={s.appSub}>💼 {st.job}</div>}
+              </div>
+              <StatusBadge />
+            </div>
           </div>
-          <StatusBadge />
-          <div style={{display:"flex", flexDirection:"column", gap:2, flexShrink:0}}>
-            <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-            <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
-            <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
-          </div>
-        </div></div>
+        </div>
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
@@ -1082,7 +1092,7 @@ const s = {
   checkInactive:{background:"#f0f0f0",color:"#555",border:"1.5px solid #e0e0e0",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
   btnPrimary:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:12,padding:"13px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8,flex:1},
   btnDanger:{background:"#ffebee",color:"#c62828",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:8},
-  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:16,cursor:"pointer",borderRadius:8,padding:"2px 7px",lineHeight:1.2},
+  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:16,cursor:"pointer",borderRadius:8,padding:"5px 9px"},
   sectionTitle:{fontWeight:700,fontSize:15,color:"#1a237e",marginBottom:8},
   listRow:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #f0f0f0"},
   listItem:{fontSize:14,color:"#333"},
