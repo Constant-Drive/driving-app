@@ -111,6 +111,7 @@ export default function App() {
   const [newStudentNotes, setNewStudentNotes] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddMenu, setShowAddMenu] = useState(false);
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [lessonDate, setLessonDate] = useState(today());
   const [lessonDuration, setLessonDuration] = useState(90);
@@ -409,16 +410,19 @@ export default function App() {
   if (view === "home") return (
     <div style={s.page}>
       <div style={s.header}>
-        <div style={{maxWidth:600, margin:"0 auto"}}>
-          <div style={{display:"flex", justifyContent:"flex-end", gap:10, marginBottom:6}}>
-            <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-            <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
-            <button style={s.settingsBtn} onClick={() => setView("settings")}>⚙️</button>
-          </div>
-          <div style={{display:"flex", alignItems:"center", gap:14}}>
-            <span style={s.logo}>🚗</span>
-            <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
-            <StatusBadge />
+        <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:14}}>
+          <span style={s.logo}>🚗</span>
+          <div style={{flex:1}}><div style={s.appTitle}>Οδηγώ & Μαθαίνω</div><div style={s.appSub}>Διαχείριση Μαθητών</div></div>
+          <StatusBadge />
+          <div style={{position:"relative", flexShrink:0}}>
+            <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
+            {showHeaderMenu && (
+              <div style={s.headerMenu}>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("settings"); }}>⚙️ Ρυθμίσεις</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -513,22 +517,23 @@ export default function App() {
     return (
       <div style={s.page}>
         <div style={s.header}>
-          <div style={{maxWidth:600, margin:"0 auto"}}>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
-              <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
-              <div style={{display:"flex", gap:10}}>
-                <button style={s.settingsBtn} onClick={() => setView("schedule")}>📅</button>
-                <button style={s.settingsBtn} onClick={() => setView("sounds")}>🔊</button>
-                <button style={s.settingsBtn} onClick={() => { const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️</button>
-              </div>
+          <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:12}}>
+            <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
+            <div style={{flex:1}}>
+              <div style={s.appTitle}>{st.name}</div>
+              {st.phone && <div style={s.appSub}>{st.phone}</div>}
+              {st.job && <div style={s.appSub}>💼 {st.job}</div>}
             </div>
-            <div style={{display:"flex", alignItems:"center", gap:14}}>
-              <div style={{flex:1}}>
-                <div style={s.appTitle}>{st.name}</div>
-                {st.phone && <div style={s.appSub}>{st.phone}</div>}
-                {st.job && <div style={s.appSub}>💼 {st.job}</div>}
-              </div>
-              <StatusBadge />
+            <StatusBadge />
+            <div style={{position:"relative", flexShrink:0}}>
+              <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
+              {showHeaderMenu && (
+                <div style={s.headerMenu}>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️ Μετάβαση κάτω</button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1092,7 +1097,9 @@ const s = {
   checkInactive:{background:"#f0f0f0",color:"#555",border:"1.5px solid #e0e0e0",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
   btnPrimary:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:12,padding:"13px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8,flex:1},
   btnDanger:{background:"#ffebee",color:"#c62828",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:8},
-  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:16,cursor:"pointer",borderRadius:8,padding:"5px 9px"},
+  settingsBtn:{background:"rgba(255,255,255,0.15)",border:"none",color:"white",fontSize:20,cursor:"pointer",borderRadius:8,padding:"4px 12px",fontWeight:700},
+  headerMenu:{position:"absolute",top:"100%",right:0,marginTop:6,background:"white",borderRadius:12,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",padding:6,zIndex:100,display:"flex",flexDirection:"column",gap:4,minWidth:210},
+  headerMenuItem:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"12px 14px",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left",whiteSpace:"nowrap"},
   sectionTitle:{fontWeight:700,fontSize:15,color:"#1a237e",marginBottom:8},
   listRow:{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid #f0f0f0"},
   listItem:{fontSize:14,color:"#333"},
