@@ -81,6 +81,8 @@ export default function App() {
   const [newPhrase, setNewPhrase] = useState("");
   const [editPhraseIdx, setEditPhraseIdx] = useState(null);
   const [showPhraseManager, setShowPhraseManager] = useState(false);
+  const [phraseDragIdx, setPhraseDragIdx] = useState(null);
+  const [phraseOverIdx, setPhraseOverIdx] = useState(null);
   const [editPhraseText, setEditPhraseText] = useState("");
   const [editPhraseMode, setEditPhraseMode] = useState("voice");
   const [editPhraseSound, setEditPhraseSound] = useState("horn");
@@ -769,6 +771,29 @@ export default function App() {
         : p));
       setEditPhraseIdx(null);
     }
+    function movePhrase(from, to) {
+      if (from === null || to === null || from === to) return;
+      const next = [...phrases];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      updatePhrases(next);
+    }
+    function handlePhraseTouchMove(e) {
+      if (phraseDragIdx === null) return;
+      const touch = e.touches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      if (el) {
+        const row = el.closest('[data-phrase-idx]');
+        if (row) {
+          const idx = parseInt(row.getAttribute('data-phrase-idx'));
+          if (idx !== phraseOverIdx) setPhraseOverIdx(idx);
+        }
+      }
+    }
+    function handlePhraseTouchEnd() {
+      if (phraseDragIdx !== null && phraseOverIdx !== null) movePhrase(phraseDragIdx, phraseOverIdx);
+      setPhraseDragIdx(null); setPhraseOverIdx(null);
+    }
     return (
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}>
@@ -823,8 +848,27 @@ export default function App() {
         </button>
         {showPhraseManager && (
         <div style={s.formCard}>
+          <div style={{fontSize:11,color:"#888",marginBottom:6}}>Σύρε από το ≡ για αλλαγή σειράς</div>
           {phrases.map((p, i) => (
-            <div key={i} style={s.listRow}>
+            <div key={i} data-phrase-idx={i}
+              style={{...s.listRow,
+                background: phraseOverIdx===i && phraseDragIdx!==null ? "#e8eaf6" : "transparent",
+                opacity: phraseDragIdx===i ? 0.4 : 1,
+                borderTop: phraseOverIdx===i && phraseDragIdx!==null && phraseDragIdx>i ? "2px solid #3949ab" : "1px solid transparent",
+                borderBottom: phraseOverIdx===i && phraseDragIdx!==null && phraseDragIdx<i ? "2px solid #3949ab" : "1px solid #f0f0f0"}}
+              onDragOver={(e)=>{e.preventDefault(); if(phraseOverIdx!==i) setPhraseOverIdx(i);}}
+              onDrop={(e)=>{e.preventDefault(); movePhrase(phraseDragIdx, i); setPhraseDragIdx(null); setPhraseOverIdx(null);}}
+            >
+              <span
+                draggable
+                onDragStart={()=>setPhraseDragIdx(i)}
+                onDragEnd={()=>{setPhraseDragIdx(null); setPhraseOverIdx(null);}}
+                onTouchStart={()=>setPhraseDragIdx(i)}
+                onTouchMove={handlePhraseTouchMove}
+                onTouchEnd={handlePhraseTouchEnd}
+                style={s.dragHandle}
+                title="Σύρε για αλλαγή σειράς"
+              >≡</span>
               <span style={{...s.listItem, flex:1}}>{p.text}</span>
               <div style={{display:"flex", gap:4, flexShrink:0}}>
                 <button style={s.editSmallBtn} onClick={() => { startEditPhrase(i); setTimeout(() => { const el = document.getElementById('phrase-editor'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'}); }, 100); }}>✏️</button>
