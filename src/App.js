@@ -696,8 +696,15 @@ export default function App() {
           <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
           <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
-          <button style={s.settingsBtn} onClick={() => setShowSmsImport(v => !v)}>📩</button>
-          <button style={s.settingsBtn} onClick={() => { if (showSchedForm) { closeSchedForm(); } else { setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); } }}>{showSchedForm ? "✕" : "＋"}</button>
+          <div style={{position:"relative", flexShrink:0}}>
+            <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
+            {showHeaderMenu && (
+              <div style={s.headerMenu}>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
+              </div>
+            )}
+          </div>
         </div></div>
         <div style={s.container}>
 
