@@ -680,7 +680,7 @@ export default function App() {
           date: smsEffectiveDate,
           time: en.time,
           studentId: stu ? stu.id : null,
-          studentName: stu ? stu.name : en.name,
+          studentName: stu ? stu.name : titleCaseGreek(en.name),
           duration: en.duration,
           notes: en.notes || "",
         };
@@ -1145,9 +1145,16 @@ function EditableList({ items, onUpdate }) {
 }
 
 // Normalize Latin lookalike capitals to Greek (SMS often mixes them)
+// and strip accents/diacritics so "Νίκος" matches "ΝΙΚΟΣ"
 function normalizeGreek(str) {
   const map = {"A":"Α","B":"Β","E":"Ε","Z":"Ζ","H":"Η","I":"Ι","K":"Κ","M":"Μ","N":"Ν","O":"Ο","P":"Ρ","T":"Τ","Y":"Υ","X":"Χ"};
-  return (str||"").toUpperCase().split("").map(c => map[c] || c).join("");
+  const noAccents = (str||"").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return noAccents.toUpperCase().split("").map(c => map[c] || c).join("");
+}
+
+// Convert ALL CAPS name to Title Case (Πρώτο κεφαλαίο)
+function titleCaseGreek(str) {
+  return (str||"").toLowerCase().split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
 const WEEKDAYS_GR = ["ΚΥΡΙΑΚΗ","ΔΕΥΤΕΡΑ","ΤΡΙΤΗ","ΤΕΤΑΡΤΗ","ΠΕΜΠΤΗ","ΠΑΡΑΣΚΕΥΗ","ΣΑΒΒΑΤΟ"];
