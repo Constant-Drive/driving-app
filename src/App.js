@@ -114,6 +114,9 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [showSmsImport, setShowSmsImport] = useState(false);
+  const [smsText, setSmsText] = useState("");
+  const [smsDate, setSmsDate] = useState("");
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [lessonDate, setLessonDate] = useState(today());
   const [lessonDuration, setLessonDuration] = useState(90);
@@ -655,12 +658,45 @@ export default function App() {
     const isToday = schedViewDate === today();
     const isPastDay = schedViewDate < today();
 
+    const smsParsed = smsText.trim() ? parseSms(smsText) : null;
+    const smsEffectiveDate = smsDate || (smsParsed && smsParsed.weekdayIdx !== null ? nextDateForWeekday(smsParsed.weekdayIdx) : today());
+
+    function matchStudent(name) {
+      const n = normalizeGreek(name).trim();
+      if (!n) return null;
+      return students.find(st => {
+        const sn = normalizeGreek(st.name);
+        return sn.includes(n) || n.split(" ").some(w => w.length >= 3 && sn.includes(w));
+      }) || null;
+    }
+
+    function importSms() {
+      if (!smsParsed || smsParsed.entries.length === 0) return;
+      const base = Date.now();
+      const newEntries = smsParsed.entries.map((en, i) => {
+        const stu = matchStudent(en.name);
+        return {
+          id: base + i,
+          date: smsEffectiveDate,
+          time: en.time,
+          studentId: stu ? stu.id : null,
+          studentName: stu ? stu.name : en.name,
+          duration: en.duration,
+          notes: en.notes || "",
+        };
+      });
+      updateSchedule([...schedule, ...newEntries]);
+      setSchedViewDate(smsEffectiveDate);
+      setSmsText(""); setSmsDate(""); setShowSmsImport(false);
+    }
+
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
           <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
           <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
+          <button style={s.settingsBtn} onClick={() => setShowSmsImport(v => !v)}>📩</button>
           <button style={s.settingsBtn} onClick={() => { if (showSchedForm) { closeSchedForm(); } else { setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); } }}>{showSchedForm ? "✕" : "＋"}</button>
         </div></div>
         <div style={s.container}>
@@ -680,6 +716,38 @@ export default function App() {
           </div>
           {!isToday && (
             <button style={s.todayBtn} onClick={() => setSchedViewDate(today())}>Επιστροφή στο Σήμερα</button>
+          )}
+
+          {/* SMS import */}
+          {showSmsImport && (
+            <div style={s.formCard}>
+              <div style={s.sectionTitle}>📩 Εισαγωγή από SMS</div>
+              <label style={s.label}>Επικόλλησε το μήνυμα</label>
+              <textarea style={{...s.input, height:120, resize:"vertical", fontFamily:"monospace", fontSize:13}}
+                placeholder={"ΠΑΡΑΣΚΕΥΗ\n9:30 ΝΙΚΟΣ (3)\n11:00 ΕΙΡΗΝΗ (6)..."}
+                value={smsText} onChange={e => setSmsText(e.target.value)}/>
+              <label style={s.label}>Ημερομηνία ραντεβού</label>
+              <input type="date" style={{...s.input, maxWidth:"100%"}} value={smsEffectiveDate} onChange={e => setSmsDate(e.target.value)}/>
+              {smsParsed && smsParsed.entries.length > 0 && (
+                <div style={{marginTop:10}}>
+                  <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:6}}>Προεπισκόπηση ({smsParsed.entries.length} ραντεβού):</div>
+                  {smsParsed.entries.map((en, i) => {
+                    const stu = matchStudent(en.name);
+                    return (
+                      <div key={i} style={{fontSize:13, padding:"6px 8px", background:"#f8f9ff", borderRadius:8, marginBottom:4}}>
+                        <b>{en.time}</b> ({en.duration + "'"}) — {stu ? <span style={{color:"#2e7d32"}}>✓ {stu.name}</span> : <span style={{color:"#e65100"}}>⚠ {en.name} (νέο όνομα)</span>}
+                        {en.notes && <span style={{color:"#888"}}> • {en.notes}</span>}
+                      </div>
+                    );
+                  })}
+                  <div style={{fontSize:11, color:"#888", marginTop:4}}>✓ = αντιστοιχήθηκε με μαθητή σου, ⚠ = δεν βρέθηκε μαθητής (θα καταχωρηθεί μόνο το όνομα)</div>
+                </div>
+              )}
+              <div style={{display:"flex", gap:10, marginTop:12}}>
+                <button style={{...s.btnPrimary, marginTop:0}} onClick={importSms} disabled={!smsParsed || smsParsed.entries.length === 0}>Εισαγωγή</button>
+                <button style={{...s.dialogCancel, flex:1}} onClick={() => { setShowSmsImport(false); setSmsText(""); setSmsDate(""); }}>Ακύρωση</button>
+              </div>
+            </div>
           )}
 
           {/* New appointment form (collapsible) */}
@@ -733,7 +801,7 @@ export default function App() {
                       <span>👤</span>
                       <span style={studentExists ? s.schedStudent : s.schedStudentGone}
                         onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
-                        {e.studentName}{!studentExists && " (διαγραμμένος)"}
+                        {e.studentName}{!studentExists && e.studentId != null && " (διαγραμμένος)"}
                       </span>
                     </div>
                   </div>
@@ -1067,6 +1135,74 @@ function EditableList({ items, onUpdate }) {
       </div>
     </div>
   );
+}
+
+// Normalize Latin lookalike capitals to Greek (SMS often mixes them)
+function normalizeGreek(str) {
+  const map = {"A":"Α","B":"Β","E":"Ε","Z":"Ζ","H":"Η","I":"Ι","K":"Κ","M":"Μ","N":"Ν","O":"Ο","P":"Ρ","T":"Τ","Y":"Υ","X":"Χ"};
+  return (str||"").toUpperCase().split("").map(c => map[c] || c).join("");
+}
+
+const WEEKDAYS_GR = ["ΚΥΡΙΑΚΗ","ΔΕΥΤΕΡΑ","ΤΡΙΤΗ","ΤΕΤΑΡΤΗ","ΠΕΜΠΤΗ","ΠΑΡΑΣΚΕΥΗ","ΣΑΒΒΑΤΟ"];
+
+function nextDateForWeekday(weekdayIdx) {
+  const now = new Date(today() + "T12:00:00");
+  for (let i = 1; i <= 7; i++) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + i);
+    if (d.getDay() === weekdayIdx) {
+      const off = d.getTimezoneOffset();
+      return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+    }
+  }
+  return today();
+}
+
+function timeDiffMinutes(t1, t2) {
+  const [h1, m1] = t1.split(":").map(Number);
+  const [h2, m2] = t2.split(":").map(Number);
+  return (h2 * 60 + m2) - (h1 * 60 + m1);
+}
+
+function parseSms(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+  let weekdayIdx = null;
+  const entries = [];
+  const timeRe = /^(\d{1,2})[:.](\d{2})(?:\s*[-–]\s*(\d{1,2})[:.](\d{2}))?\s+(.+)$/;
+
+  for (const line of lines) {
+    const norm = normalizeGreek(line);
+    // Check for weekday line
+    const wd = WEEKDAYS_GR.findIndex(w => norm.includes(w));
+    if (wd !== -1 && !timeRe.test(line)) { weekdayIdx = wd; continue; }
+
+    const m = line.match(timeRe);
+    if (m) {
+      const startTime = m[1].padStart(2,"0") + ":" + m[2];
+      let duration = 90;
+      if (m[3]) {
+        const endTime = m[3].padStart(2,"0") + ":" + m[4];
+        const diff = timeDiffMinutes(startTime, endTime);
+        if (diff > 0) duration = diff;
+      }
+      const rest = m[5].trim();
+      const parenIdx = rest.indexOf("(");
+      let name, notes;
+      if (parenIdx !== -1) {
+        name = rest.slice(0, parenIdx).trim();
+        notes = rest.slice(parenIdx).trim();
+      } else {
+        name = rest;
+        notes = "";
+      }
+      entries.push({ time: startTime, duration, name, notes });
+    } else if (entries.length > 0) {
+      // Continuation line -> append to previous entry notes
+      const prev = entries[entries.length - 1];
+      prev.notes = (prev.notes ? prev.notes + " " : "") + line;
+    }
+  }
+  return { weekdayIdx, entries };
 }
 
 function addMinutesToTime(time, mins) {
