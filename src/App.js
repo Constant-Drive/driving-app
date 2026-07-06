@@ -713,7 +713,7 @@ export default function App() {
             <button style={s.dayNavBtn} onClick={() => shiftDay(-1)}>‹</button>
             <div style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 6px", minWidth:0, gap:3}}>
               <div style={s.dayNavDate}>{formatDate(schedViewDate)}</div>
-              <div style={{display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", justifyContent:"center"}}>
+              <div style={{display:"flex", alignItems:"center", gap:4, flexWrap:"nowrap", justifyContent:"center"}}>
                 {isToday && <span style={s.todayTag}>Σήμερα</span>}
                 {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length} μαθ.</span>}
                 {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0))}€</span>}
@@ -1322,8 +1322,8 @@ const s = {
   dayNav:{display:"flex",alignItems:"center",background:"white",borderRadius:12,padding:"10px 12px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"},
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,width:38,height:38,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0},
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
-  countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
-  feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"2px 9px"},
+  countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
   soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"12px 10px",cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,height:90},
@@ -1334,7 +1334,7 @@ const s = {
   modeInactive:{flex:1,background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:8,padding:"9px 6px",fontSize:11,fontWeight:600,cursor:"pointer"},
   soundTypeActive:{background:"#1565c0",color:"white",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundTypeInactive:{background:"#f0f0f0",color:"#666",border:"1px solid #e0e0e0",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:600,cursor:"pointer"},
-  todayTag:{fontSize:11,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 9px"},
+  todayTag:{fontSize:10,fontWeight:700,color:"#2e7d32",background:"#e8f5e9",borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   todayBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1.5px solid #a5d6a7",borderRadius:10,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",alignSelf:"center"},
   row2:{display:"flex",gap:10},
   nextCard:{background:"linear-gradient(135deg,#1565c0,#1976d2)",borderRadius:14,padding:"14px 16px",color:"white",cursor:"pointer",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
