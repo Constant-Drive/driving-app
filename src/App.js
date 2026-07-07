@@ -98,7 +98,7 @@ export default function App() {
   const [routes, setRoutes] = useState(DEFAULT_ROUTES);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [view, setView] = useState("home");
+  const [view, setView] = useState("schedule");
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [editLesson, setEditLesson] = useState(null);
   const [editStudentName, setEditStudentName] = useState("");
@@ -242,7 +242,7 @@ export default function App() {
     const stu = students.find(x => String(x.id) === String(schedStudentId));
     if (editSchedId) {
       updateSchedule(schedule.map(e => e.id === editSchedId
-        ? { ...e, date: schedDate, time: schedTime, studentId: schedStudentId, studentName: stu ? stu.name : e.studentName, duration: schedDuration, notes: schedNotes }
+        ? { ...e, date: schedDate, time: schedTime, studentId: schedStudentId, studentName: stu ? stu.name : e.studentName, duration: schedDuration === "" ? 90 : schedDuration, notes: schedNotes }
         : e));
     } else {
       const entry = {
@@ -251,7 +251,7 @@ export default function App() {
         time: schedTime,
         studentId: schedStudentId,
         studentName: stu ? stu.name : "—",
-        duration: schedDuration,
+        duration: schedDuration === "" ? 90 : schedDuration,
         notes: schedNotes,
       };
       updateSchedule([...schedule, entry]);
@@ -349,7 +349,7 @@ export default function App() {
   }
 
   function saveLesson() {
-    const lesson = { id: editLesson||Date.now(), date: lessonDate, duration: lessonDuration, exercises: lessonExercises, routes: lessonRoutes, notes: lessonNotes };
+    const lesson = { id: editLesson||Date.now(), date: lessonDate, duration: lessonDuration === "" ? 90 : lessonDuration, exercises: lessonExercises, routes: lessonRoutes, notes: lessonNotes };
     const nextStudents = students.map(s => {
       if (s.id !== selectedStudent.id) return s;
       const lessons = editLesson ? s.lessons.map(l => l.id===editLesson ? lesson : l) : [...s.lessons, lesson];
@@ -633,7 +633,7 @@ export default function App() {
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={handleBack}>‹ Πίσω</button><div style={s.appTitle}>{editLesson ? "Επεξεργασία Μαθήματος" : "Νέο Μάθημα"}</div></div></div>
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
-        <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(Number(e.target.value))}/>
+        <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
         <label style={s.label}>Δοκιμασίες</label>
         <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
         <label style={s.label}>Διαδρομές</label>
@@ -693,7 +693,7 @@ export default function App() {
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
-          <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
+          <button style={s.back} onClick={() => setView("home")}>👥 Μαθητές</button>
           <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
           <div style={{position:"relative", flexShrink:0}}>
@@ -779,7 +779,7 @@ export default function App() {
                 ))}
               </select>
               <label style={s.label}>Διάρκεια (λεπτά)</label>
-              <input type="number" style={s.input} value={schedDuration} onChange={e => setSchedDuration(Number(e.target.value))}/>
+              <input type="number" style={s.input} value={schedDuration} onChange={e => setSchedDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
               {schedTime && <div style={{fontSize:13, color:"#888", marginTop:4}}>Λήξη: {addMinutesToTime(schedTime, schedDuration)}</div>}
               <label style={s.label}>Σημειώσεις</label>
               <textarea style={{...s.input, height:60, resize:"vertical"}} placeholder="π.χ. Συνάντηση στο πάρκινγκ..." value={schedNotes} onChange={e => setSchedNotes(e.target.value)}/>
