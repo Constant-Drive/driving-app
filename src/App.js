@@ -693,13 +693,13 @@ export default function App() {
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
-          <button style={s.back} onClick={() => setView("home")}>👥 Μαθητές</button>
           <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
           <StatusBadge />
           <div style={{position:"relative", flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
             {showHeaderMenu && (
               <div style={s.headerMenu}>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("home"); }}>👥 Μαθητές</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
               </div>
