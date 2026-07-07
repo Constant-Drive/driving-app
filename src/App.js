@@ -336,7 +336,7 @@ export default function App() {
     const stu = students.find(x => String(x.id) === String(entry.studentId));
     if (!stu) { alert("Ο μαθητής έχει διαγραφεί."); return; }
     setSelectedStudent(stu);
-    setLessonDate(entry.date); setLessonDuration(90); setLessonExercises([]);
+    setLessonDate(entry.date); setLessonDuration(entry.duration != null ? entry.duration : 90); setLessonExercises([]);
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null);
     setConvertingSchedId(entry.id);
     setView("addLesson");
