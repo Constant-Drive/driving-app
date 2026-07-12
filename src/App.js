@@ -545,8 +545,8 @@ export default function App() {
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
-            <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
-            <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.reduce((a,l) => a+l.duration, 0)}</div><div style={s.summaryLbl}>Συνολικά λεπτά</div></div>
+            <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Συναντήσεις</div></div>
+            <div style={s.summaryBox}><div style={s.summaryNum}>{Math.round(st.lessons.reduce((a,l) => a+l.duration, 0) / 45 * 10) / 10}</div><div style={s.summaryLbl}>Διδακτικές ώρες</div></div>
           </div>
           {(() => {
             const pct = completionPct(st, exercises, routes);
