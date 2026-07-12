@@ -716,6 +716,7 @@ export default function App() {
               <div style={{display:"flex", alignItems:"center", gap:4, flexWrap:"nowrap", justifyContent:"center"}}>
                 {isToday && <span style={s.todayTag}>Σήμερα</span>}
                 {dayEntries.length > 0 && <span style={s.countBadge}>{dayEntries.length} μαθ.</span>}
+                {dayEntries.length > 0 && <span style={s.hoursBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + (e.duration != null ? e.duration : 90), 0) / 45)} δ.ω.</span>}
                 {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0))}€</span>}
               </div>
             </div>
@@ -1324,6 +1325,7 @@ const s = {
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  hoursBadge:{background:"#fff3e0",color:"#e65100",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
   soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"12px 10px",cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,height:90},
