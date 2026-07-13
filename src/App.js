@@ -693,7 +693,7 @@ export default function App() {
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
-          <div style={{flex:1}}><div style={s.appTitle}>📅 Πρόγραμμα</div></div>
+          <div style={{flex:1}}><div style={s.appTitle}>📅 Ημερήσιο Πρόγραμμα</div></div>
           <StatusBadge />
           <div style={{position:"relative", flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
@@ -813,9 +813,9 @@ export default function App() {
                       </span>
                     </div>
                   </div>
-                  <div style={{display:"flex", gap:6}}>
+                  <div style={{display:"flex", gap:4, marginLeft:8}}>
                     <button style={s.editSmallBtn} onClick={() => startEditSchedule(e)}>✏️</button>
-                    <button style={s.delBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
+                    <button style={s.removeBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
                 {e.notes && <div style={s.lessonNotes}>{e.notes}</div>}
