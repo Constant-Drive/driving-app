@@ -531,10 +531,12 @@ export default function App() {
     function sendExtraLessonsViber() {
       if (!managerPhone) { alert("Ρύθμισε πρώτα το τηλέφωνο της υπεύθυνης στις Ρυθμίσεις (⚙️)."); return; }
       const n = st.extraLessons;
-      const msg = `Ο μαθητής ${st.name} χρειάζεται ${n} επιπλέον μάθημα${n === 1 ? "" : "τα"} πριν τις εξετάσεις${st.examDate ? ` (ημερομηνία εξέτασης: ${formatDate(st.examDate)})` : ""}.`;
+      const msg = `Ο μαθητής ${st.name} χρειάζεται ${n} επιπλέον μάθημα${n === 1 ? "" : "τα"} πριν τις εξετάσεις.`;
       try { navigator.clipboard && navigator.clipboard.writeText(msg); } catch(e) {}
       const phone = managerPhone.replace(/[^0-9+]/g, "");
-      const url = `viber://chat?number=${encodeURIComponent(phone)}&text=${encodeURIComponent(msg)}`;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const sep = isIOS ? "&" : "?";
+      const url = `sms:${phone}${sep}body=${encodeURIComponent(msg)}`;
       window.location.href = url;
       updateStudentExam({ extraLessonsSent: n });
     }
@@ -617,7 +619,7 @@ export default function App() {
                 st.extraLessonsSent === st.extraLessons ? (
                   <div style={s.sentTag}>✓ Απεστάλη ({st.extraLessons} μαθήματα)</div>
                 ) : (
-                  <button style={s.viberBtn} onClick={sendExtraLessonsViber}>💬 Αποστολή στο Viber</button>
+                  <button style={s.viberBtn} onClick={sendExtraLessonsViber}>📱 Αποστολή SMS</button>
                 )
               )}
             </div>
@@ -1005,7 +1007,7 @@ export default function App() {
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
       <div style={s.container}>
         <div style={s.formCard}>
-          <div style={{...s.sectionTitle, marginBottom:8}}>📞 Υπεύθυνη Εξετάσεων (Viber)</div>
+          <div style={{...s.sectionTitle, marginBottom:8}}>📱 Υπεύθυνη Εξετάσεων (SMS)</div>
           <label style={s.label}>Τηλέφωνο (με κωδικό χώρας, π.χ. +30697...)</label>
           <input style={s.input} placeholder="+30xxxxxxxxxx" value={managerPhone}
             onChange={e => setManagerPhone(e.target.value)}
@@ -1369,7 +1371,7 @@ const s = {
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   hoursBadge:{background:"#fff3e0",color:"#e65100",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
-  viberBtn:{background:"#7360f2",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
+  viberBtn:{background:"#1565c0",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
   sentTag:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,textAlign:"center",marginTop:10},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
