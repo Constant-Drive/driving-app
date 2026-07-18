@@ -531,7 +531,7 @@ export default function App() {
     function sendExtraLessonsViber() {
       if (!managerPhone) { alert("Ρύθμισε πρώτα το τηλέφωνο της υπεύθυνης στις Ρυθμίσεις (⚙️)."); return; }
       const n = st.extraLessons;
-      const msg = `Όνομα εκπαιδευόμενου: ${st.name}\n\nΧρειάζεται ${n} επιπλέον μάθημα${n === 1 ? "" : "τα"} πριν τις εξετάσεις.`;
+      const msg = `Ο εκπαιδευόμενος: ${st.name}\n\nΧρειάζεται ${n} επιπλέον μάθημα${n === 1 ? "" : "τα"} πριν τις εξετάσεις.`;
       try { navigator.clipboard && navigator.clipboard.writeText(msg); } catch(e) {}
       const phone = managerPhone.replace(/[^0-9+]/g, "");
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
