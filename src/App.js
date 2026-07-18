@@ -538,7 +538,7 @@ export default function App() {
       const sep = isIOS ? "&" : "?";
       const url = `sms:${phone}${sep}body=${encodeURIComponent(msg)}`;
       window.location.href = url;
-      updateStudentExam({ extraLessonsSent: n });
+      updateStudentExam({ extraLessonsSent: true });
     }
 
     return (
@@ -614,9 +614,9 @@ export default function App() {
               <label style={s.label}>Ημερομηνία εξέτασης</label>
               <input type="date" style={{...s.input, maxWidth:"100%"}} value={st.examDate || ""} onChange={e => updateStudentExam({ examDate: e.target.value })}/>
               <label style={s.label}>Επιπλέον μαθήματα (πέρα από τα υποχρεωτικά)</label>
-              <input type="number" min="0" style={s.input} value={st.extraLessons ?? ""} onChange={e => updateStudentExam({ extraLessons: e.target.value === "" ? "" : Number(e.target.value) })}/>
+              <input type="number" min="0" style={s.input} value={st.extraLessons ?? ""} onChange={e => updateStudentExam({ extraLessons: e.target.value === "" ? "" : Number(e.target.value), extraLessonsSent: false })}/>
               {st.extraLessons > 0 && (
-                st.extraLessonsSent === st.extraLessons ? (
+                st.extraLessonsSent ? (
                   <div style={s.sentTag}>✓ Απεστάλη ({st.extraLessons} μαθήματα)</div>
                 ) : (
                   <button style={s.viberBtn} onClick={sendExtraLessonsViber}>📱 Αποστολή SMS</button>
