@@ -126,6 +126,7 @@ export default function App() {
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
+  const [managerPhone, setManagerPhone] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -138,6 +139,7 @@ export default function App() {
           if (data.routes) setRoutes(normalizeList(data.routes));
           if (data.schedule) setSchedule(data.schedule);
           if (data.phrases) setPhrases(normalizePhrases(data.phrases));
+          if (data.managerPhone) setManagerPhone(data.managerPhone);
         }
       } catch(e) { console.error(e); }
       setLoading(false);
@@ -145,9 +147,9 @@ export default function App() {
     load();
   }, []);
 
-  async function persist(s, ex, rt, sch, phr) {
+  async function persist(s, ex, rt, sch, phr, mgrPhone) {
     setSaving(true);
-    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt, schedule: sch !== undefined ? sch : schedule, phrases: phr !== undefined ? phr : phrases }); }
+    try { await setDoc(DATA_DOC, { students: s, exercises: ex, routes: rt, schedule: sch !== undefined ? sch : schedule, phrases: phr !== undefined ? phr : phrases, managerPhone: mgrPhone !== undefined ? mgrPhone : managerPhone }); }
     catch(e) { console.error(e); }
     setSaving(false);
   }
@@ -163,6 +165,7 @@ export default function App() {
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
   function updateSchedule(newSch) { setSchedule(newSch); persist(students, exercises, routes, newSch); }
   function updatePhrases(newPhr) { setPhrases(newPhr); persist(students, exercises, routes, undefined, newPhr); }
+  function updateManagerPhone(newPhone) { setManagerPhone(newPhone); persist(students, exercises, routes, undefined, undefined, newPhone); }
 
   function speak(text) {
     try {
@@ -519,6 +522,23 @@ export default function App() {
   if (view === "student" && selectedStudent) {
     const st = selectedStudent;
     const sorted = [...st.lessons].sort((a,b) => b.date.localeCompare(a.date));
+
+    function updateStudentExam(patch) {
+      updateStudents(prev => prev.map(s => s.id === st.id ? { ...s, ...patch } : s));
+      setSelectedStudent(prev => prev && prev.id === st.id ? { ...prev, ...patch } : prev);
+    }
+
+    function sendExtraLessonsViber() {
+      if (!managerPhone) { alert("Ρύθμισε πρώτα το τηλέφωνο της υπεύθυνης στις Ρυθμίσεις (⚙️)."); return; }
+      const n = st.extraLessons;
+      const msg = `Ο μαθητής ${st.name} χρειάζεται ${n} επιπλέον μάθημα${n === 1 ? "" : "τα"} πριν τις εξετάσεις${st.examDate ? ` (ημερομηνία εξέτασης: ${formatDate(st.examDate)})` : ""}.`;
+      try { navigator.clipboard && navigator.clipboard.writeText(msg); } catch(e) {}
+      const phone = managerPhone.replace(/[^0-9+]/g, "");
+      const url = `viber://chat?number=${encodeURIComponent(phone)}&text=${encodeURIComponent(msg)}`;
+      window.location.href = url;
+      updateStudentExam({ extraLessonsSent: n });
+    }
+
     return (
       <div style={s.page}>
         <div style={s.header}>
@@ -586,6 +606,21 @@ export default function App() {
           <div style={{display:"flex", flexDirection:"column", gap:12}}>
             <button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button>
             <ProgressCheck student={st} exercises={exercises} routes={routes} />
+
+            <div style={s.formCard}>
+              <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Εξετάσεις</div>
+              <label style={s.label}>Ημερομηνία εξέτασης</label>
+              <input type="date" style={{...s.input, maxWidth:"100%"}} value={st.examDate || ""} onChange={e => updateStudentExam({ examDate: e.target.value })}/>
+              <label style={s.label}>Επιπλέον μαθήματα (πέρα από τα υποχρεωτικά)</label>
+              <input type="number" min="0" style={s.input} value={st.extraLessons ?? ""} onChange={e => updateStudentExam({ extraLessons: e.target.value === "" ? "" : Number(e.target.value) })}/>
+              {st.extraLessons > 0 && (
+                st.extraLessonsSent === st.extraLessons ? (
+                  <div style={s.sentTag}>✓ Απεστάλη ({st.extraLessons} μαθήματα)</div>
+                ) : (
+                  <button style={s.viberBtn} onClick={sendExtraLessonsViber}>💬 Αποστολή στο Viber</button>
+                )
+              )}
+            </div>
             <div id="student-bottom" style={{display:"flex", gap:10}}>
               <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
               <button style={{...s.btnDanger, marginTop:0, flex:1}} onClick={() => deleteStudent(st.id)}>Διαγραφή Μαθητή</button>
@@ -970,6 +1005,14 @@ export default function App() {
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
       <div style={s.container}>
         <div style={s.formCard}>
+          <div style={{...s.sectionTitle, marginBottom:8}}>📞 Υπεύθυνη Εξετάσεων (Viber)</div>
+          <label style={s.label}>Τηλέφωνο (με κωδικό χώρας, π.χ. +30697...)</label>
+          <input style={s.input} placeholder="+30xxxxxxxxxx" value={managerPhone}
+            onChange={e => setManagerPhone(e.target.value)}
+            onBlur={() => updateManagerPhone(managerPhone.trim())}/>
+          <div style={{fontSize:11, color:"#888", marginTop:6}}>Χρησιμοποιείται για την αποστολή επιπλέον μαθημάτων στην καρτέλα κάθε μαθητή.</div>
+        </div>
+        <div style={s.formCard}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
             <div style={{...s.sectionTitle, marginBottom:0}}>🏁 Δοκιμασίες</div>
             <button style={s.sortBtn} onClick={() => updateExercises([...exercises].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
@@ -1326,6 +1369,8 @@ const s = {
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   hoursBadge:{background:"#fff3e0",color:"#e65100",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  viberBtn:{background:"#7360f2",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
+  sentTag:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,textAlign:"center",marginTop:10},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
   soundBtn:{background:"linear-gradient(135deg,#1a237e,#3949ab)",color:"white",border:"none",borderRadius:14,padding:"12px 10px",cursor:"pointer",boxShadow:"0 2px 6px rgba(26,35,126,0.25)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:6,height:90},
