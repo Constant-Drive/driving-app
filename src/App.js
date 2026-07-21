@@ -1422,10 +1422,10 @@ const s = {
   progressLbl:{fontSize:12,fontWeight:600,color:"#888"},
   progressTrack:{background:"#eee",borderRadius:8,height:10,overflow:"hidden"},
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
-  convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
+  convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start",width:"100%",boxSizing:"border-box"},
   convertedTag:{color:"#2e7d32",fontSize:13,fontWeight:700,marginTop:4},
-  payBtn:{background:"#fff3e0",color:"#e65100",border:"1px solid #ffcc80",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
-  paidTagBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
+  payBtn:{background:"#fff3e0",color:"#e65100",border:"1px solid #ffcc80",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start",width:"100%",boxSizing:"border-box"},
+  paidTagBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start",width:"100%",boxSizing:"border-box"},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
