@@ -855,7 +855,14 @@ export default function App() {
                     <button style={s.removeBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
-                {e.notes && <div style={s.lessonNotes}>{e.notes}</div>}
+                {e.notes && <div style={s.lessonNotes}>{highlightMoney(e.notes)}</div>}
+                {hasMoney(e.notes) && (
+                  e.paid ? (
+                    <button style={s.paidTagBtn} onClick={() => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: false } : x))}>✓ Πληρώθηκε</button>
+                  ) : (
+                    <button style={s.payBtn} onClick={() => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: true } : x))}>💰 Σήμανση ως πληρωμένο</button>
+                  )
+                )}
                 {studentExists && !e.converted && (
                   <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
                 )}
@@ -1265,6 +1272,27 @@ function parseSms(text) {
   return { weekdayIdx, entries };
 }
 
+const MONEY_RE = /(?:€\s?\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s?€)/g;
+
+function hasMoney(text) {
+  if (!text) return false;
+  MONEY_RE.lastIndex = 0;
+  return MONEY_RE.test(text);
+}
+
+// Splits text into an array of strings/spans, highlighting € amounts in bold red
+function highlightMoney(text) {
+  if (!text) return text;
+  const parts = text.split(MONEY_RE);
+  const matches = text.match(MONEY_RE) || [];
+  const out = [];
+  parts.forEach((part, i) => {
+    if (part) out.push(part);
+    if (matches[i]) out.push(<span key={"money"+i} style={{color:"#c62828", fontWeight:800}}>{matches[i]}</span>);
+  });
+  return out;
+}
+
 function addMinutesToTime(time, mins) {
   if (!time) return "";
   const [h, m] = time.split(":").map(Number);
@@ -1396,6 +1424,8 @@ const s = {
   progressFill:{height:"100%",borderRadius:8,transition:"width 0.3s"},
   convertBtn:{background:"#e8eaf6",color:"#1a237e",border:"1px solid #c5cae9",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
   convertedTag:{color:"#2e7d32",fontSize:13,fontWeight:700,marginTop:4},
+  payBtn:{background:"#fff3e0",color:"#e65100",border:"1px solid #ffcc80",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
+  paidTagBtn:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:8,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",marginTop:4,alignSelf:"flex-start"},
   schedStudent:{fontSize:14,color:"#1a237e",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   schedStudentGone:{fontSize:14,color:"#999",fontWeight:600,fontStyle:"italic"},
 };
