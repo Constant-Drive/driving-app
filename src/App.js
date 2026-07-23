@@ -858,9 +858,19 @@ export default function App() {
                 {e.notes && <div style={s.lessonNotes}>{highlightMoney(e.notes)}</div>}
                 {hasMoney(e.notes) && (
                   e.paid ? (
-                    <button style={s.paidTagBtn} onClick={() => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: false } : x))}>✓ Πληρώθηκε</button>
+                    <button style={s.paidTagBtn} onClick={() => setConfirmDialog({
+                      message: "Να μαρκαριστεί ξανά ως μη πληρωμένο;",
+                      confirmLabel: "Ναι",
+                      cancelLabel: "Άκυρο",
+                      onConfirm: () => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: false } : x))
+                    })}>✓ Πληρώθηκε</button>
                   ) : (
-                    <button style={s.payBtn} onClick={() => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: true } : x))}>💰 Σήμανση ως πληρωμένο</button>
+                    <button style={s.payBtn} onClick={() => setConfirmDialog({
+                      message: "Να μαρκαριστεί το μάθημα ως πληρωμένο;",
+                      confirmLabel: "Ναι",
+                      cancelLabel: "Άκυρο",
+                      onConfirm: () => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, paid: true } : x))
+                    })}>💰 Σήμανση ως πληρωμένο</button>
                   )
                 )}
                 {studentExists && !e.converted && (
