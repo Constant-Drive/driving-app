@@ -547,7 +547,7 @@ export default function App() {
           <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:12}}>
             <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
             <div style={{flex:1}}>
-              <div style={s.appTitle}>{st.name}</div>
+              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}</div>
               {st.phone && <div style={s.appSub}>{st.phone}</div>}
               {st.job && <div style={s.appSub}>💼 {st.job}</div>}
             </div>
@@ -834,6 +834,7 @@ export default function App() {
           )}
           {dayEntries.map(e => {
             const studentExists = students.some(x => String(x.id) === String(e.studentId));
+            const stuFull = studentExists ? students.find(x => String(x.id) === String(e.studentId)) : null;
             return (
               <div key={e.id} style={{...s.lessonCard, opacity: (isPastDay || e.converted) ? 0.55 : 1}}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
@@ -842,12 +843,13 @@ export default function App() {
                       <div style={s.schedTimeBig}>{e.time}</div>
                       {e.duration > 0 && <div style={s.schedEndTime}>έως {addMinutesToTime(e.time, e.duration)}</div>}
                     </div>
-                    <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
+                    <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0, flexWrap:"wrap"}}>
                       <span>👤</span>
                       <span style={studentExists ? s.schedStudent : s.schedStudentGone}
                         onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
                         {e.studentName}{!studentExists && e.studentId != null && " (διαγραμμένος)"}
                       </span>
+                      {stuFull && stuFull.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
                     </div>
                   </div>
                   <div style={{display:"flex", gap:4, marginLeft:8}}>
