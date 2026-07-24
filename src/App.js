@@ -843,11 +843,13 @@ export default function App() {
                       <div style={s.schedTimeBig}>{e.time}</div>
                       {e.duration > 0 && <div style={s.schedEndTime}>έως {addMinutesToTime(e.time, e.duration)}</div>}
                     </div>
-                    <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0, flexWrap:"wrap"}}>
-                      <span>👤</span>
-                      <span style={studentExists ? s.schedStudent : s.schedStudentGone}
-                        onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
-                        {e.studentName}{!studentExists && e.studentId != null && " (διαγραμμένος)"}
+                    <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0, flexWrap:"wrap", rowGap:2}}>
+                      <span style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
+                        <span style={{flexShrink:0}}>👤</span>
+                        <span style={{...(studentExists ? s.schedStudent : s.schedStudentGone), minWidth:0, wordBreak:"break-word"}}
+                          onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
+                          {e.studentName}{!studentExists && e.studentId != null && " (διαγραμμένος)"}
+                        </span>
                       </span>
                       {stuFull && stuFull.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
                     </div>
