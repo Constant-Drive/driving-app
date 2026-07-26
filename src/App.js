@@ -92,6 +92,7 @@ export default function App() {
   const [schedDuration, setSchedDuration] = useState(90);
   const [schedNotes, setSchedNotes] = useState("");
   const [schedViewDate, setSchedViewDate] = useState(today());
+  const [incomeMonth, setIncomeMonth] = useState(monthStrOf(today()));
   const [showSchedForm, setShowSchedForm] = useState(false);
   const [editSchedId, setEditSchedId] = useState(null);
   const [exercises, setExercises] = useState(DEFAULT_EXERCISES);
@@ -685,9 +686,7 @@ export default function App() {
 
   if (view === "schedule") {
     function shiftDay(delta) {
-      const d = new Date(schedViewDate + "T12:00:00");
-      d.setDate(d.getDate() + delta);
-      setSchedViewDate(d.toISOString().slice(0,10));
+      setSchedViewDate(shiftDateStr(schedViewDate, delta));
     }
     const dayEntries = schedule
       .filter(e => e.date === schedViewDate)
@@ -739,6 +738,7 @@ export default function App() {
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("home"); }}>👥 Μαθητές</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("income"); }}>📊 Έσοδα</button>
               </div>
             )}
           </div>
@@ -1023,6 +1023,88 @@ export default function App() {
     );
   }
 
+  if (view === "income") {
+    const monthEntries = schedule.filter(e => monthStrOf(e.date) === incomeMonth);
+    const feeTotal = monthEntries.reduce((sum, e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0);
+    const pendingEntries = monthEntries.filter(e => hasMoney(e.notes) && !e.paid).sort((a,b) => a.date.localeCompare(b.date));
+    const pendingTotal = pendingEntries.reduce((sum, e) => sum + sumMoney(e.notes), 0);
+    const isCurrentMonth = incomeMonth === monthStrOf(today());
+
+    // Group entries with fee>0 by day, for the earnings ledger
+    const byDay = {};
+    monthEntries.forEach(e => {
+      const fee = ((e.duration != null ? e.duration : 90) / 90) * 14;
+      if (fee > 0) (byDay[e.date] = byDay[e.date] || []).push({ ...e, fee });
+    });
+    const days = Object.keys(byDay).sort().reverse();
+
+    return (
+      <div style={s.page}>
+        <div style={s.header}><div style={s.headerInner}>
+          <button style={s.back} onClick={() => setView("schedule")}>‹ Πίσω</button>
+          <div style={{flex:1}}><div style={s.appTitle}>📊 Έσοδα</div></div>
+        </div></div>
+        <div style={s.container}>
+          <div style={s.dayNav}>
+            <button style={s.dayNavBtn} onClick={() => setIncomeMonth(shiftMonthStr(incomeMonth, -1))}>‹</button>
+            <div style={{flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"0 6px", minWidth:0, gap:3}}>
+              <div style={s.dayNavDate}>{formatMonth(incomeMonth)}</div>
+              {isCurrentMonth && <span style={s.todayTag}>Τρέχων μήνας</span>}
+            </div>
+            <button style={s.dayNavBtn} onClick={() => setIncomeMonth(shiftMonthStr(incomeMonth, 1))}>›</button>
+          </div>
+          {!isCurrentMonth && (
+            <button style={s.todayBtn} onClick={() => setIncomeMonth(monthStrOf(today()))}>Επιστροφή στον τρέχοντα μήνα</button>
+          )}
+
+          <div style={s.incomeTotalCard}>
+            <div style={s.incomeTotalLbl}>Σύνολο αμοιβής μήνα</div>
+            <div style={s.incomeTotalNum}>{feeTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+          </div>
+
+          {pendingTotal > 0 && (
+            <div style={s.incomePendingCard}>
+              <div>
+                <div style={s.incomePendingLbl}>⚠ Εκκρεμείς εισπράξεις για τη σχολή</div>
+                <div style={s.incomePendingNum}>{pendingTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+              </div>
+            </div>
+          )}
+          {pendingEntries.map(e => (
+            <div key={e.id} style={s.pendingRow} onClick={() => openStudentFromSchedule(e.studentId)}>
+              <span>{formatDate(e.date)} • {e.time} — {e.studentName}</span>
+              <span style={{fontWeight:800, color:"#e65100"}}>{sumMoney(e.notes).toFixed(2).replace(/\.00$/,"")}€</span>
+            </div>
+          ))}
+
+          <div style={{fontSize:12, fontWeight:700, color:"#888", marginTop:6}}>Αναλυτικά ανά ημέρα</div>
+
+          {days.length === 0 && (
+            <div style={s.empty}><div style={{fontSize:36}}>📊</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα αυτόν τον μήνα</div></div>
+          )}
+
+          {days.map(d => {
+            const dayTotal = byDay[d].reduce((sum, e) => sum + e.fee, 0);
+            return (
+              <div key={d} style={s.lessonCard}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+                  <div style={s.lessonDate}>{formatDate(d)}</div>
+                  <div style={{color:"#2e7d32", fontWeight:800, fontSize:15}}>{dayTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+                </div>
+                {byDay[d].map(e => (
+                  <div key={e.id} style={{display:"flex", justifyContent:"space-between", fontSize:13, color:"#666", padding:"3px 0"}}>
+                    <span>{e.time} — {e.studentName}</span>
+                    <span style={{fontWeight:700, color:"#2e7d32"}}>{e.fee.toFixed(2).replace(/\.00$/,"")}€</span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (view === "settings") return (
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
@@ -1226,17 +1308,29 @@ function titleCaseGreek(str) {
 
 const WEEKDAYS_GR = ["ΚΥΡΙΑΚΗ","ΔΕΥΤΕΡΑ","ΤΡΙΤΗ","ΤΕΤΑΡΤΗ","ΠΕΜΠΤΗ","ΠΑΡΑΣΚΕΥΗ","ΣΑΒΒΑΤΟ"];
 
+// Timezone-safe date string arithmetic (avoids any local-timezone/DST edge cases)
+function dateStrToUTCms(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+function utcMsToDateStr(ms) {
+  const nd = new Date(ms);
+  return nd.getUTCFullYear() + "-" + String(nd.getUTCMonth() + 1).padStart(2, "0") + "-" + String(nd.getUTCDate()).padStart(2, "0");
+}
+function shiftDateStr(dateStr, deltaDays) {
+  return utcMsToDateStr(dateStrToUTCms(dateStr) + deltaDays * 86400000);
+}
+function weekdayOfDateStr(dateStr) {
+  return new Date(dateStrToUTCms(dateStr)).getUTCDay();
+}
+
 function nextDateForWeekday(weekdayIdx) {
-  const now = new Date(today() + "T12:00:00");
+  const base = today();
   for (let i = 0; i <= 7; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    if (d.getDay() === weekdayIdx) {
-      const off = d.getTimezoneOffset();
-      return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
-    }
+    const cand = shiftDateStr(base, i);
+    if (weekdayOfDateStr(cand) === weekdayIdx) return cand;
   }
-  return today();
+  return base;
 }
 
 function timeDiffMinutes(t1, t2) {
@@ -1305,6 +1399,31 @@ function highlightMoney(text) {
     if (matches[i]) out.push(<span key={"money"+i} style={{color:"#c62828", fontWeight:800}}>{matches[i]}</span>);
   });
   return out;
+}
+
+// Sums all € amounts found in a text (e.g. "50€ + 20€" -> 70)
+function sumMoney(text) {
+  if (!text) return 0;
+  const matches = text.match(MONEY_RE) || [];
+  return matches.reduce((sum, m) => {
+    const num = parseFloat(m.replace(/[€\s]/g, "").replace(",", "."));
+    return sum + (isNaN(num) ? 0 : num);
+  }, 0);
+}
+
+const MONTHS_FULL = ["Ιανουάριος","Φεβρουάριος","Μάρτιος","Απρίλιος","Μάιος","Ιούνιος","Ιούλιος","Αύγουστος","Σεπτέμβριος","Οκτώβριος","Νοέμβριος","Δεκέμβριος"];
+
+function monthStrOf(dateStr) { return dateStr.slice(0, 7); }
+function shiftMonthStr(monthStr, delta) {
+  let [y, m] = monthStr.split("-").map(Number);
+  m += delta;
+  while (m > 12) { m -= 12; y += 1; }
+  while (m < 1) { m += 12; y -= 1; }
+  return y + "-" + String(m).padStart(2, "0");
+}
+function formatMonth(monthStr) {
+  const [y, m] = monthStr.split("-").map(Number);
+  return `${MONTHS_FULL[m - 1]} ${y}`;
 }
 
 function addMinutesToTime(time, mins) {
@@ -1413,6 +1532,13 @@ const s = {
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   hoursBadge:{background:"#fff3e0",color:"#e65100",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  incomeTotalCard:{background:"linear-gradient(135deg,#2e7d32,#43a047)",borderRadius:14,padding:"18px 16px",color:"white",textAlign:"center",boxShadow:"0 2px 8px rgba(46,125,50,0.3)"},
+  incomeTotalLbl:{fontSize:13,color:"rgba(255,255,255,0.9)",fontWeight:600},
+  incomeTotalNum:{fontSize:32,fontWeight:800,marginTop:4},
+  incomePendingCard:{background:"#fff8e1",border:"1px solid #ffe082",borderRadius:12,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8},
+  incomePendingLbl:{fontSize:12,color:"#8d6e00",fontWeight:600,flex:1},
+  incomePendingNum:{fontSize:16,fontWeight:800,color:"#e65100"},
+  pendingRow:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#555",background:"white",borderRadius:10,padding:"9px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",cursor:"pointer"},
   viberBtn:{background:"#1565c0",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
   sentTag:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,textAlign:"center",marginTop:10},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
