@@ -291,6 +291,11 @@ export default function App() {
     else alert("Ο μαθητής έχει διαγραφεί. Το ραντεβού παραμένει στο ιστορικό.");
   }
 
+  function openScheduleDate(date) {
+    setSchedViewDate(date);
+    setView("schedule");
+  }
+
   function startAddStudent(type) {
     setNewStudentType(type);
     setNewStudentName(""); setNewStudentPhone(""); setNewStudentJob(""); setNewStudentNotes("");
@@ -1071,8 +1076,12 @@ export default function App() {
             </div>
           )}
           {pendingEntries.map(e => (
-            <div key={e.id} style={s.pendingRow} onClick={() => openStudentFromSchedule(e.studentId)}>
-              <span>{formatDate(e.date)} • {e.time} — {e.studentName}</span>
+            <div key={e.id} style={s.pendingRow}>
+              <span>
+                <span style={s.pendingDateLink} onClick={() => openScheduleDate(e.date)}>{formatDate(e.date)} • {e.time}</span>
+                {" — "}
+                <span style={s.pendingNameLink} onClick={() => openStudentFromSchedule(e.studentId)}>{e.studentName}</span>
+              </span>
               <span style={{fontWeight:800, color:"#e65100"}}>{sumMoney(e.notes).toFixed(2).replace(/\.00$/,"")}€</span>
             </div>
           ))}
@@ -1538,7 +1547,9 @@ const s = {
   incomePendingCard:{background:"#fff8e1",border:"1px solid #ffe082",borderRadius:12,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8},
   incomePendingLbl:{fontSize:12,color:"#8d6e00",fontWeight:600,flex:1},
   incomePendingNum:{fontSize:16,fontWeight:800,color:"#e65100"},
-  pendingRow:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#555",background:"white",borderRadius:10,padding:"9px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)",cursor:"pointer"},
+  pendingRow:{display:"flex",justifyContent:"space-between",fontSize:13,color:"#555",background:"white",borderRadius:10,padding:"9px 12px",boxShadow:"0 1px 3px rgba(0,0,0,0.06)"},
+  pendingDateLink:{color:"#555",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
+  pendingNameLink:{color:"#1a237e",fontWeight:700,cursor:"pointer",textDecoration:"underline"},
   viberBtn:{background:"#1565c0",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
   sentTag:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,textAlign:"center",marginTop:10},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
