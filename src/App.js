@@ -1064,14 +1064,14 @@ export default function App() {
 
           <div style={s.incomeTotalCard}>
             <div style={s.incomeTotalLbl}>Σύνολο αμοιβής μήνα</div>
-            <div style={s.incomeTotalNum}>{feeTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+            <div style={s.incomeTotalNum}>{formatEuro(feeTotal)}</div>
           </div>
 
           {pendingTotal > 0 && (
             <div style={s.incomePendingCard}>
               <div>
                 <div style={s.incomePendingLbl}>⚠ Εκκρεμείς εισπράξεις για τη σχολή</div>
-                <div style={s.incomePendingNum}>{pendingTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+                <div style={s.incomePendingNum}>{formatEuro(pendingTotal)}</div>
               </div>
             </div>
           )}
@@ -1082,7 +1082,7 @@ export default function App() {
                 {" — "}
                 <span style={s.pendingNameLink} onClick={() => openStudentFromSchedule(e.studentId)}>{e.studentName}</span>
               </span>
-              <span style={{fontWeight:800, color:"#e65100"}}>{sumMoney(e.notes).toFixed(2).replace(/\.00$/,"")}€</span>
+              <span style={{fontWeight:800, color:"#e65100"}}>{formatEuro(sumMoney(e.notes))}</span>
             </div>
           ))}
 
@@ -1098,12 +1098,12 @@ export default function App() {
               <div key={d} style={s.lessonCard}>
                 <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
                   <div style={s.lessonDate}>{formatDate(d)}</div>
-                  <div style={{color:"#2e7d32", fontWeight:800, fontSize:15}}>{dayTotal.toFixed(2).replace(/\.00$/,"")}€</div>
+                  <div style={{color:"#2e7d32", fontWeight:800, fontSize:15}}>{formatEuro(dayTotal)}</div>
                 </div>
                 {byDay[d].map(e => (
                   <div key={e.id} style={{display:"flex", justifyContent:"space-between", fontSize:13, color:"#666", padding:"3px 0"}}>
                     <span>{e.time} — {e.studentName}</span>
-                    <span style={{fontWeight:700, color:"#2e7d32"}}>{e.fee.toFixed(2).replace(/\.00$/,"")}€</span>
+                    <span style={{fontWeight:700, color:"#2e7d32"}}>{formatEuro(e.fee)}</span>
                   </div>
                 ))}
               </div>
@@ -1433,6 +1433,16 @@ function shiftMonthStr(monthStr, delta) {
 function formatMonth(monthStr) {
   const [y, m] = monthStr.split("-").map(Number);
   return `${MONTHS_FULL[m - 1]} ${y}`;
+}
+
+// Formats a number as Greek-style currency: "." for thousands, "," for decimals (omitted if .00)
+function formatEuro(n) {
+  const rounded = Math.round((n || 0) * 100) / 100;
+  const neg = rounded < 0;
+  const parts = Math.abs(rounded).toFixed(2).split(".");
+  let intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const decPart = parts[1];
+  return (neg ? "-" : "") + intPart + (decPart !== "00" ? "," + decPart : "") + "€";
 }
 
 function addMinutesToTime(time, mins) {
