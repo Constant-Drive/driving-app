@@ -569,7 +569,7 @@ export default function App() {
           <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:12}}>
             <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
             <div style={{flex:1}}>
-              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}</div>
+              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκλήρωσε</span>}</div>
               {st.phone && <div style={s.appSub}>{st.phone}</div>}
               {st.job && <div style={s.appSub}>💼 {st.job}</div>}
             </div>
