@@ -473,30 +473,46 @@ export default function App() {
           );
         })()}
         {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πάτησε το ＋ στην μπάρα αναζήτησης για να προσθέσεις μαθητή</div></div>}
-        {searchQuery && students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-          <div style={s.empty}>
-            <div style={{fontSize:36}}>🔍</div>
-            <div style={s.emptyText}>Δεν βρέθηκε μαθητής</div>
-            <div style={{display:"flex", gap:8, marginTop:14, justifyContent:"center"}}>
-              <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("new")}>+ Νέος Μαθητής</button>
-              <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("retrain")}>+ Μετεκπαίδευση</button>
-            </div>
-          </div>
-        )}
-        {students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase())).sort((a,b) => a.name.localeCompare(b.name, 'el')).map(st => (
-          <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
-            <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
-            <div style={s.studentInfo}>
-              <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>}</div>
-              {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
-              <div style={s.studentMeta}>
-                {st.lessons.length} μαθήματα
-                {(() => { const d = daysAgo(lastLessonDate(st)); return d !== null ? <span style={{color:"#aaa"}}> • {d === 0 ? "σήμερα" : d === 1 ? "χθες" : `πριν ${d} μέρες`}</span> : null; })()}
+        {(() => {
+          const filtered = students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          const active = filtered.filter(st => !st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
+          const completed = filtered.filter(st => st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
+          const StudentRow = (st) => (
+            <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
+              <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
+              <div style={s.studentInfo}>
+                <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}</div>
+                {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
+                <div style={s.studentMeta}>
+                  {st.lessons.length} μαθήματα
+                  {(() => { const d = daysAgo(lastLessonDate(st)); return d !== null ? <span style={{color:"#aaa"}}> • {d === 0 ? "σήμερα" : d === 1 ? "χθες" : `πριν ${d} μέρες`}</span> : null; })()}
+                </div>
               </div>
+              <span style={s.chevron}>›</span>
             </div>
-            <span style={s.chevron}>›</span>
-          </div>
-        ))}
+          );
+          return (
+            <>
+              {searchQuery && filtered.length === 0 && (
+                <div style={s.empty}>
+                  <div style={{fontSize:36}}>🔍</div>
+                  <div style={s.emptyText}>Δεν βρέθηκε μαθητής</div>
+                  <div style={{display:"flex", gap:8, marginTop:14, justifyContent:"center"}}>
+                    <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("new")}>+ Νέος Μαθητής</button>
+                    <button style={{...s.addMenuItem, width:"auto", padding:"10px 16px"}} onClick={() => startAddStudent("retrain")}>+ Μετεκπαίδευση</button>
+                  </div>
+                </div>
+              )}
+              {active.map(StudentRow)}
+              {completed.length > 0 && (
+                <>
+                  <div style={s.sectionDivider}>✅ Ολοκληρωμένοι Μαθητές ({completed.length})</div>
+                  {completed.map(StudentRow)}
+                </>
+              )}
+            </>
+          );
+        })()}
         {students.length > 0 && (
           <div style={s.totalBox}>
             <span style={s.totalLbl}>Σύνολο μαθητών</span>
@@ -627,6 +643,25 @@ export default function App() {
                 ) : (
                   <button style={s.viberBtn} onClick={sendExtraLessonsViber}>📱 Αποστολή SMS</button>
                 )
+              )}
+            </div>
+
+            <div style={s.formCard}>
+              <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Ολοκλήρωση Εκπαίδευσης</div>
+              {st.completed ? (
+                <button style={s.paidTagBtn} onClick={() => setConfirmDialog({
+                  message: "Να αναιρεθεί η ολοκλήρωση εκπαίδευσης του μαθητή;",
+                  confirmLabel: "Ναι",
+                  cancelLabel: "Άκυρο",
+                  onConfirm: () => updateStudentExam({ completed: false })
+                })}>✓ Ολοκλήρωσε την εκπαίδευση</button>
+              ) : (
+                <button style={s.completeBtn} onClick={() => setConfirmDialog({
+                  message: `Να μαρκαριστεί ο/η ${st.name} ως μαθητής που ολοκλήρωσε την εκπαίδευση;`,
+                  confirmLabel: "Ναι",
+                  cancelLabel: "Άκυρο",
+                  onConfirm: () => updateStudentExam({ completed: true })
+                })}>🎓 Σήμανση Ολοκλήρωσης</button>
               )}
             </div>
             <div id="student-bottom" style={{display:"flex", gap:10}}>
@@ -1536,6 +1571,8 @@ const s = {
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
   fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer"},
   typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4},
+  completedBadge:{fontSize:11,fontWeight:600,color:"#2e7d32",background:"#e8f5e9",borderRadius:6,padding:"1px 7px",marginLeft:4},
+  sectionDivider:{fontSize:12,fontWeight:700,color:"#2e7d32",margin:"14px 2px 2px",textTransform:"uppercase",letterSpacing:0.3},
   progressBtn:{background:"#e3f2fd",color:"#1565c0",border:"1px solid #bbdefb",borderRadius:8,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
   progressBox:{background:"white",borderRadius:12,padding:"14px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",marginTop:8},
   missTag:{background:"#ffebee",color:"#c62828",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600},
@@ -1561,6 +1598,7 @@ const s = {
   pendingDateLink:{color:"#555",fontWeight:600,cursor:"pointer",textDecoration:"underline"},
   pendingNameLink:{color:"#1a237e",fontWeight:700,cursor:"pointer",textDecoration:"underline"},
   viberBtn:{background:"#1565c0",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%",marginTop:10},
+  completeBtn:{background:"#2e7d32",color:"white",border:"none",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
   sentTag:{background:"#e8f5e9",color:"#2e7d32",border:"1px solid #a5d6a7",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,textAlign:"center",marginTop:10},
   sortBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"},
   soundGrid:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10},
