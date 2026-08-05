@@ -615,8 +615,8 @@ export default function App() {
                 <div style={s.lessonNum}>Αρ. Μαθήματος: {sorted.length - idx}</div>
                 <div style={s.lessonDur}>{l.duration} λεπτά</div>
               </div></div>
-              {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
+              {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
               {l.notes && <div>
                 <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
                 <div style={s.lessonNotes}>{l.notes}</div>
@@ -712,10 +712,10 @@ export default function App() {
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
-        <label style={s.label}>Δοκιμασίες</label>
-        <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
         <label style={s.label}>Διαδρομές</label>
         <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleArr(lessonRoutes, setLessonRoutes, r.name)}>{r.name}</button>)}</div>
+        <label style={s.label}>Δοκιμασίες</label>
+        <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
         <label style={s.label}>Σημειώσεις</label>
         <textarea style={{...s.input, height:80, resize:"vertical"}} placeholder="π.χ. Καλή πρόοδος στις στροφές..." value={lessonNotes} onChange={e => setLessonNotes(e.target.value)}/>
         <button style={s.btnPrimary} onClick={saveLesson}>Αποθήκευση</button>
@@ -886,7 +886,7 @@ export default function App() {
                     <div style={{display:"flex", alignItems:"center", gap:5, minWidth:0, flexWrap:"wrap", rowGap:2}}>
                       <span style={{display:"flex", alignItems:"center", gap:5, minWidth:0}}>
                         <span style={{flexShrink:0}}>👤</span>
-                        <span style={{...(studentExists ? s.schedStudent : s.schedStudentGone), minWidth:0, wordBreak:"break-word"}}
+                        <span style={{...(studentExists ? s.schedStudent : s.schedStudentGone), minWidth:0, wordBreak:"break-word", ...(hasMoney(e.notes) ? {color:"#c62828"} : {})}}
                           onClick={() => studentExists && openStudentFromSchedule(e.studentId)}>
                           {e.studentName}{!studentExists && e.studentId != null && " (διαγραμμένος)"}
                         </span>
@@ -1163,17 +1163,17 @@ export default function App() {
         </div>
         <div style={s.formCard}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
-            <div style={{...s.sectionTitle, marginBottom:0}}>🏁 Δοκιμασίες</div>
-            <button style={s.sortBtn} onClick={() => updateExercises([...exercises].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
-          </div>
-          <EditableList items={exercises} onUpdate={updateExercises}/>
-        </div>
-        <div style={s.formCard}>
-          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
             <div style={{...s.sectionTitle, marginBottom:0}}>🗺️ Διαδρομές</div>
             <button style={s.sortBtn} onClick={() => updateRoutes([...routes].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
           </div>
           <EditableList items={routes} onUpdate={updateRoutes}/>
+        </div>
+        <div style={s.formCard}>
+          <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+            <div style={{...s.sectionTitle, marginBottom:0}}>🏁 Δοκιμασίες</div>
+            <button style={s.sortBtn} onClick={() => updateExercises([...exercises].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
+          </div>
+          <EditableList items={exercises} onUpdate={updateExercises}/>
         </div>
       </div>
     </div>
