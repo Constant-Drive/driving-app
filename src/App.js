@@ -106,6 +106,7 @@ export default function App() {
   const [editStudentPhone, setEditStudentPhone] = useState("");
   const [editStudentJob, setEditStudentJob] = useState("");
   const [editStudentNotes, setEditStudentNotes] = useState("");
+  const [editStudentType, setEditStudentType] = useState("new");
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentType, setNewStudentType] = useState("new");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -316,13 +317,14 @@ export default function App() {
   function startEditStudent(s) {
     setEditStudentName(s.name); setEditStudentPhone(s.phone||"");
     setEditStudentJob(s.job||""); setEditStudentNotes(s.notes||"");
+    setEditStudentType(s.type || "new");
     setView("editStudent");
   }
 
   function saveStudent() {
     updateStudents(prev => prev.map(s => {
       if (s.id !== selectedStudent.id) return s;
-      const updated = { ...s, name: editStudentName.trim(), phone: editStudentPhone.trim(), job: editStudentJob.trim(), notes: editStudentNotes.trim() };
+      const updated = { ...s, name: editStudentName.trim(), phone: editStudentPhone.trim(), job: editStudentJob.trim(), notes: editStudentNotes.trim(), type: editStudentType };
       setSelectedStudent(updated); return updated;
     }));
     setView("student");
@@ -681,6 +683,11 @@ export default function App() {
         <label style={s.label}>Ονοματεπώνυμο</label><input style={s.input} value={editStudentName} onChange={e => setEditStudentName(e.target.value)}/>
         <label style={s.label}>Τηλέφωνο</label><input style={s.input} value={editStudentPhone} onChange={e => setEditStudentPhone(e.target.value)}/>
         <label style={s.label}>Επάγγελμα</label><input style={s.input} value={editStudentJob} onChange={e => setEditStudentJob(e.target.value)}/>
+        <label style={s.label}>Τύπος Μαθητή</label>
+        <div style={{display:"flex", gap:8, marginBottom:12}}>
+          <button style={{...(editStudentType === "new" ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentType("new")}>🆕 Νέος</button>
+          <button style={{...(editStudentType === "retrain" ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentType("retrain")}>🔄 Μετεκπαίδευση</button>
+        </div>
         <label style={s.label}>Σημειώσεις</label><textarea style={{...s.input, height:70, resize:"vertical"}} value={editStudentNotes} onChange={e => setEditStudentNotes(e.target.value)}/>
         <button style={s.btnPrimary} onClick={saveStudent}>Αποθήκευση</button>
       </div></div>
