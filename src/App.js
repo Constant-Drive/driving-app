@@ -476,7 +476,13 @@ export default function App() {
         })()}
         {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πάτησε το ＋ στην μπάρα αναζήτησης για να προσθέσεις μαθητή</div></div>}
         {(() => {
-          const filtered = students.filter(st => st.name.toLowerCase().includes(searchQuery.toLowerCase()));
+          const q = searchQuery.toLowerCase();
+          const filtered = students.filter(st =>
+            (st.name || "").toLowerCase().includes(q) ||
+            (st.phone || "").toLowerCase().includes(q) ||
+            (st.job || "").toLowerCase().includes(q) ||
+            (st.notes || "").toLowerCase().includes(q)
+          );
           const active = filtered.filter(st => !st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
           const completed = filtered.filter(st => st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
           const StudentRow = (st) => (
