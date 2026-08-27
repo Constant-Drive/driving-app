@@ -476,12 +476,13 @@ export default function App() {
         })()}
         {students.length === 0 && <div style={s.empty}><div style={{fontSize:48}}>🛣️</div><div style={s.emptyTitle}>Δεν έχεις μαθητές ακόμα</div><div style={s.emptyText}>Πάτησε το ＋ στην μπάρα αναζήτησης για να προσθέσεις μαθητή</div></div>}
         {(() => {
-          const q = searchQuery.toLowerCase();
+          const foldText = (t) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const q = foldText(searchQuery);
           const filtered = students.filter(st =>
-            (st.name || "").toLowerCase().includes(q) ||
-            (st.phone || "").toLowerCase().includes(q) ||
-            (st.job || "").toLowerCase().includes(q) ||
-            (st.notes || "").toLowerCase().includes(q)
+            foldText(st.name).includes(q) ||
+            foldText(st.phone).includes(q) ||
+            foldText(st.job).includes(q) ||
+            foldText(st.notes).includes(q)
           );
           const active = filtered.filter(st => !st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
           const completed = filtered.filter(st => st.completed).sort((a,b) => a.name.localeCompare(b.name, 'el'));
