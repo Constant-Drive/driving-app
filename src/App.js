@@ -41,8 +41,8 @@ function today() {
 function normalizeList(arr) {
   if (!arr) return [];
   return arr.map(it => typeof it === "string"
-    ? { name: it, reqNew: false, reqRetrain: false }
-    : { name: it.name, reqNew: !!it.reqNew, reqRetrain: !!it.reqRetrain });
+    ? { name: it, reqNew: false, reqRetrain: false, defaultExercises: [] }
+    : { name: it.name, reqNew: !!it.reqNew, reqRetrain: !!it.reqRetrain, defaultExercises: Array.isArray(it.defaultExercises) ? it.defaultExercises : [] });
 }
 function names(arr) { return normalizeList(arr).map(it => it.name); }
 
@@ -720,6 +720,21 @@ export default function App() {
         setView("student");
       }
     }
+    function toggleRouteWithDefaults(route) {
+      if (lessonRoutes.includes(route.name)) {
+        setLessonRoutes(lessonRoutes.filter(n => n !== route.name));
+      } else {
+        setLessonRoutes([...lessonRoutes, route.name]);
+        const defs = route.defaultExercises || [];
+        if (defs.length > 0) {
+          setLessonExercises(prev => {
+            const merged = [...prev];
+            defs.forEach(d => { if (!merged.includes(d)) merged.push(d); });
+            return merged;
+          });
+        }
+      }
+    }
     return (
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={handleBack}>‹ Πίσω</button><div style={s.appTitle}>{editLesson ? "Επεξεργασία Μαθήματος" : "Νέο Μάθημα"}</div></div></div>
@@ -727,7 +742,8 @@ export default function App() {
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
         <label style={s.label}>Διαδρομές</label>
-        <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleArr(lessonRoutes, setLessonRoutes, r.name)}>{r.name}</button>)}</div>
+        <div style={{fontSize:11, color:"#888", marginTop:-4, marginBottom:4}}>Επιλέγοντας διαδρομή προτείνονται αυτόματα οι συνηθισμένες δοκιμασίες της (μπορείς να τις αλλάξεις)</div>
+        <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleRouteWithDefaults(r)}>{r.name}</button>)}</div>
         <label style={s.label}>Δοκιμασίες</label>
         <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
         <label style={s.label}>Σημειώσεις</label>
@@ -1180,7 +1196,7 @@ export default function App() {
             <div style={{...s.sectionTitle, marginBottom:0}}>🗺️ Διαδρομές</div>
             <button style={s.sortBtn} onClick={() => updateRoutes([...routes].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
           </div>
-          <EditableList items={routes} onUpdate={updateRoutes}/>
+          <EditableList items={routes} onUpdate={updateRoutes} linkOptions={exercises}/>
         </div>
         <div style={s.formCard}>
           <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
@@ -1255,18 +1271,25 @@ function NotesToggle({ notes }) {
   );
 }
 
-function EditableList({ items, onUpdate }) {
+function EditableList({ items, onUpdate, linkOptions }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editingVal, setEditingVal] = useState("");
   const [newItem, setNewItem] = useState("");
   const [pendingRemove, setPendingRemove] = useState(null);
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
+  const [linkOpenIdx, setLinkOpenIdx] = useState(null);
   function startEdit(i) { setEditingIdx(i); setEditingVal(items[i].name); }
   function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]={...next[i], name:editingVal.trim()}; onUpdate(next); setEditingIdx(null); }
   function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
-  function addItem() { if(!newItem.trim()) return; onUpdate([...items, {name:newItem.trim(), reqNew:false, reqRetrain:false}]); setNewItem(""); }
+  function addItem() { if(!newItem.trim()) return; onUpdate([...items, {name:newItem.trim(), reqNew:false, reqRetrain:false, defaultExercises:[]}]); setNewItem(""); }
   function toggleReq(i, key) { const next=[...items]; next[i]={...next[i], [key]:!next[i][key]}; onUpdate(next); }
+  function toggleDefaultExercise(i, exName) {
+    const next = [...items];
+    const cur = next[i].defaultExercises || [];
+    next[i] = { ...next[i], defaultExercises: cur.includes(exName) ? cur.filter(n => n !== exName) : [...cur, exName] };
+    onUpdate(next);
+  }
 
   function moveItem(from, to) {
     if (from === null || to === null || from === to) return;
@@ -1307,7 +1330,7 @@ function EditableList({ items, onUpdate }) {
           </div>
         </div>
       )}
-      <div style={{fontSize:11,color:"#888",marginBottom:6}}>Τικ 🆕 = υποχρεωτικό για Νέο μαθητή, 🔄 = για Μετεκπαίδευση</div>
+      <div style={{fontSize:11,color:"#888",marginBottom:6}}>Τικ 🆕 = υποχρεωτικό για Νέο μαθητή, 🔄 = για Μετεκπαίδευση{linkOptions ? " • 🔗 = προεπιλεγμένες δοκιμασίες για τη διαδρομή" : ""}</div>
       {items.map((item,i) => (
         <div key={i} data-row-idx={i}
           style={{...s.listRowCol,
@@ -1341,6 +1364,23 @@ function EditableList({ items, onUpdate }) {
             <button style={item.reqNew ? s.reqChipActive : s.reqChip} onClick={()=>toggleReq(i,"reqNew")}>🆕 Νέος</button>
             <button style={item.reqRetrain ? s.reqChipActive : s.reqChip} onClick={()=>toggleReq(i,"reqRetrain")}>🔄 Μετεκπ.</button>
           </div>
+          {linkOptions && (
+            <div style={{marginLeft:34, marginTop:6}}>
+              <button style={s.linkToggleBtn} onClick={() => setLinkOpenIdx(linkOpenIdx === i ? null : i)}>
+                🔗 Προεπιλεγμένες δοκιμασίες{item.defaultExercises && item.defaultExercises.length > 0 ? ` (${item.defaultExercises.length})` : ""}
+              </button>
+              {linkOpenIdx === i && (
+                <div style={{display:"flex", flexWrap:"wrap", gap:5, marginTop:6}}>
+                  {linkOptions.map(ex => (
+                    <button key={ex.name}
+                      style={(item.defaultExercises || []).includes(ex.name) ? s.linkChipActive : s.linkChip}
+                      onClick={() => toggleDefaultExercise(i, ex.name)}
+                    >{ex.name}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ))}
       <div style={s.addRow}>
@@ -1593,6 +1633,9 @@ const s = {
   listRowCol:{display:"flex",flexDirection:"column",padding:"9px 0",borderBottom:"1px solid #f0f0f0"},
   reqChip:{background:"#f0f0f0",color:"#888",border:"1px solid #e0e0e0",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
   reqChipActive:{background:"#1a237e",color:"white",border:"1px solid #1a237e",borderRadius:6,padding:"3px 9px",fontSize:12,fontWeight:600,cursor:"pointer"},
+  linkToggleBtn:{background:"#f3e5f5",color:"#6a1b9a",border:"1px solid #e1bee7",borderRadius:8,padding:"5px 10px",fontSize:12,fontWeight:600,cursor:"pointer"},
+  linkChip:{background:"#f0f0f0",color:"#666",border:"1px solid #e0e0e0",borderRadius:6,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer"},
+  linkChipActive:{background:"#6a1b9a",color:"white",border:"1px solid #6a1b9a",borderRadius:6,padding:"4px 10px",fontSize:12,fontWeight:600,cursor:"pointer"},
   schedTime:{fontSize:14,color:"#1565c0",fontWeight:700,marginTop:3},
   schedTimeBig:{fontSize:20,fontWeight:800,color:"#1565c0"},
   schedEndTime:{fontSize:11,color:"#aaa",fontWeight:600,marginTop:1},
