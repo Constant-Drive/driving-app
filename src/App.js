@@ -338,9 +338,17 @@ export default function App() {
 
   function openStudent(s) { setSelectedStudent(s); setView("student"); }
 
+  function scrollToRoutesSection() {
+    setTimeout(() => {
+      const el = document.getElementById('lesson-routes-section');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  }
+
   function startAddLesson() {
     setLessonDate(today()); setLessonDuration(90); setLessonExercises([]);
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null); setView("addLesson");
+    scrollToRoutesSection();
   }
 
   function convertScheduleToLesson(entry) {
@@ -351,12 +359,14 @@ export default function App() {
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null);
     setConvertingSchedId(entry.id);
     setView("addLesson");
+    scrollToRoutesSection();
   }
 
   function startEditLesson(lesson) {
     setLessonDate(lesson.date); setLessonDuration(lesson.duration);
     setLessonExercises(lesson.exercises); setLessonRoutes(lesson.routes);
     setLessonNotes(lesson.notes); setEditLesson(lesson.id); setView("addLesson");
+    scrollToRoutesSection();
   }
 
   function saveLesson() {
@@ -741,7 +751,7 @@ export default function App() {
       <div style={s.container}><div style={s.formCard}>
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
-        <label style={s.label}>Διαδρομές</label>
+        <label id="lesson-routes-section" style={s.label}>Διαδρομές</label>
         <div style={{fontSize:11, color:"#888", marginTop:-4, marginBottom:4}}>Επιλέγοντας διαδρομή προτείνονται αυτόματα οι συνηθισμένες δοκιμασίες της (μπορείς να τις αλλάξεις)</div>
         <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleRouteWithDefaults(r)}>{r.name}</button>)}</div>
         <label style={s.label}>Δοκιμασίες</label>
