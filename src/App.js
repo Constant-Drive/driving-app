@@ -107,6 +107,7 @@ export default function App() {
   const [editStudentJob, setEditStudentJob] = useState("");
   const [editStudentNotes, setEditStudentNotes] = useState("");
   const [editStudentType, setEditStudentType] = useState("new");
+  const [editStudentAutomatic, setEditStudentAutomatic] = useState(false);
   const [newStudentName, setNewStudentName] = useState("");
   const [newStudentType, setNewStudentType] = useState("new");
   const [duplicateWarning, setDuplicateWarning] = useState(false);
@@ -318,13 +319,14 @@ export default function App() {
     setEditStudentName(s.name); setEditStudentPhone(s.phone||"");
     setEditStudentJob(s.job||""); setEditStudentNotes(s.notes||"");
     setEditStudentType(s.type || "new");
+    setEditStudentAutomatic(!!s.automatic);
     setView("editStudent");
   }
 
   function saveStudent() {
     updateStudents(prev => prev.map(s => {
       if (s.id !== selectedStudent.id) return s;
-      const updated = { ...s, name: editStudentName.trim(), phone: editStudentPhone.trim(), job: editStudentJob.trim(), notes: editStudentNotes.trim(), type: editStudentType };
+      const updated = { ...s, name: editStudentName.trim(), phone: editStudentPhone.trim(), job: editStudentJob.trim(), notes: editStudentNotes.trim(), type: editStudentType, automatic: editStudentAutomatic };
       setSelectedStudent(updated); return updated;
     }));
     setView("student");
@@ -500,7 +502,7 @@ export default function App() {
             <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
               <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
               <div style={s.studentInfo}>
-                <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}</div>
+                <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}</div>
                 {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
                 <div style={s.studentMeta}>
                   {st.lessons.length} μαθήματα
@@ -588,7 +590,7 @@ export default function App() {
           <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:12}}>
             <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
             <div style={{flex:1}}>
-              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκλήρωσε</span>}</div>
+              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκλήρωσε</span>}</div>
               {st.phone && <div style={s.appSub}>{st.phone}</div>}
               {st.job && <div style={s.appSub}>💼 {st.job}</div>}
             </div>
@@ -704,6 +706,11 @@ export default function App() {
         <div style={{display:"flex", gap:8, marginBottom:12}}>
           <button style={{...(editStudentType === "new" ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentType("new")}>🆕 Νέος</button>
           <button style={{...(editStudentType === "retrain" ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentType("retrain")}>🔄 Μετεκπαίδευση</button>
+        </div>
+        <label style={s.label}>Κιβώτιο Ταχυτήτων</label>
+        <div style={{display:"flex", gap:8, marginBottom:12}}>
+          <button style={{...(!editStudentAutomatic ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentAutomatic(false)}>🕹️ Χειροκίνητο</button>
+          <button style={{...(editStudentAutomatic ? s.modeActive : s.modeInactive), fontSize:13, padding:"10px 6px"}} onClick={() => setEditStudentAutomatic(true)}>⚙️ Αυτόματο</button>
         </div>
         <label style={s.label}>Σημειώσεις</label><textarea style={{...s.input, height:70, resize:"vertical"}} value={editStudentNotes} onChange={e => setEditStudentNotes(e.target.value)}/>
         <button style={s.btnPrimary} onClick={saveStudent}>Αποθήκευση</button>
@@ -932,6 +939,7 @@ export default function App() {
                         </span>
                       </span>
                       {stuFull && stuFull.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
+                      {stuFull && stuFull.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>}
                     </div>
                   </div>
                   <div style={{display:"flex", gap:4, marginLeft:8}}>
@@ -1635,6 +1643,7 @@ const s = {
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
   fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer"},
   typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
+  autoBadge:{fontSize:11,fontWeight:600,color:"#00695c",background:"#e0f2f1",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   completedBadge:{fontSize:11,fontWeight:600,color:"#2e7d32",background:"#e8f5e9",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   sectionDivider:{fontSize:12,fontWeight:700,color:"#2e7d32",margin:"14px 2px 2px",textTransform:"uppercase",letterSpacing:0.3},
   progressBtn:{background:"#e3f2fd",color:"#1565c0",border:"1px solid #bbdefb",borderRadius:8,padding:"10px 14px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
