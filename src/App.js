@@ -739,7 +739,17 @@ export default function App() {
     }
     function toggleRouteWithDefaults(route) {
       if (lessonRoutes.includes(route.name)) {
-        setLessonRoutes(lessonRoutes.filter(n => n !== route.name));
+        const remainingRoutes = lessonRoutes.filter(n => n !== route.name);
+        const stillNeeded = new Set();
+        remainingRoutes.forEach(rn => {
+          const rObj = routes.find(r => r.name === rn);
+          (rObj && rObj.defaultExercises || []).forEach(ex => stillNeeded.add(ex));
+        });
+        const toRemove = (route.defaultExercises || []).filter(ex => !stillNeeded.has(ex));
+        setLessonRoutes(remainingRoutes);
+        if (toRemove.length > 0) {
+          setLessonExercises(prev => prev.filter(ex => !toRemove.includes(ex)));
+        }
       } else {
         setLessonRoutes([...lessonRoutes, route.name]);
         const defs = route.defaultExercises || [];
@@ -759,7 +769,7 @@ export default function App() {
         <label style={s.label}>Ημερομηνία</label><input type="date" style={s.input} value={lessonDate} onChange={e => setLessonDate(e.target.value)}/>
         <label style={s.label}>Διάρκεια (λεπτά)</label><input type="number" style={s.input} value={lessonDuration} onChange={e => setLessonDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
         <label id="lesson-routes-section" style={s.label}>Διαδρομές</label>
-        <div style={{fontSize:11, color:"#888", marginTop:-4, marginBottom:4}}>Επιλέγοντας διαδρομή προτείνονται αυτόματα οι συνηθισμένες δοκιμασίες της (μπορείς να τις αλλάξεις)</div>
+        <div style={{fontSize:11, color:"#888", marginTop:-4, marginBottom:4}}>Επιλέγοντας διαδρομή προτείνονται αυτόματα οι συνηθισμένες δοκιμασίες της· αποεπιλέγοντάς την, αφαιρούνται κι αυτές (εκτός αν χρειάζονται για άλλη επιλεγμένη διαδρομή)</div>
         <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleRouteWithDefaults(r)}>{r.name}</button>)}</div>
         <label style={s.label}>Δοκιμασίες</label>
         <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
