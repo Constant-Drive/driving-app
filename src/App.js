@@ -908,16 +908,20 @@ export default function App() {
                     return (
                       <div key={i} style={{fontSize:13, padding:"6px 8px", background:"#f8f9ff", borderRadius:8, marginBottom:4}}>
                         <div>
-                          <b>{en.time}</b> ({en.duration + "'"}) — {stu ? <span style={{color:"#2e7d32"}}>✓ {stu.name}</span> : <span style={{color:"#e65100"}}>⚠ {en.name} (νέο όνομα)</span>}
+                          <b>{en.time}</b> ({en.duration + "'"}) — {stu ? <><span style={{color:"#2e7d32"}}>✓ {stu.name}</span><StudentBadges st={stu}/></> : <span style={{color:"#e65100"}}>⚠ {en.name} (νέο όνομα)</span>}
                           {en.notes && <span style={{color:"#888"}}> • {en.notes}</span>}
                         </div>
-                        <select style={s.smsOverrideSelect} value={smsOverrides[i] || ""} onChange={e => setSmsOverrides(prev => ({ ...prev, [i]: e.target.value || undefined }))}>
-                          <option value="">Αυτόματη αντιστοίχιση ({en.name})</option>
-                          <option value="none">— Νέο όνομα (χωρίς αντιστοίχιση) —</option>
-                          {[...students].sort((a,b) => a.name.localeCompare(b.name, 'el')).map(st2 => (
-                            <option key={st2.id} value={st2.id}>{st2.name}{st2.completed ? " (Ολοκληρωμένος)" : ""}</option>
-                          ))}
-                        </select>
+                        <div style={{marginTop:5}}>
+                          <StudentPicker
+                            students={students}
+                            value={smsOverrides[i] || ""}
+                            onChange={v => setSmsOverrides(prev => ({ ...prev, [i]: v || undefined }))}
+                            extraOptions={[
+                              { value: "", label: `Αυτόματη αντιστοίχιση (${en.name})` },
+                              { value: "none", label: "— Νέο όνομα (χωρίς αντιστοίχιση) —" },
+                            ]}
+                          />
+                        </div>
                       </div>
                     );
                   })}
@@ -946,12 +950,7 @@ export default function App() {
                 </div>
               </div>
               <label style={s.label}>Μαθητής</label>
-              <select style={s.input} value={schedStudentId} onChange={e => setSchedStudentId(e.target.value)}>
-                <option value="">— Επίλεξε μαθητή —</option>
-                {[...students].sort((a,b)=>a.name.localeCompare(b.name,'el')).map(st => (
-                  <option key={st.id} value={st.id}>{st.name}{st.type === "retrain" ? " (Μετεκπ.)" : ""}</option>
-                ))}
-              </select>
+              <StudentPicker students={students} value={schedStudentId} onChange={setSchedStudentId} placeholder="— Επίλεξε μαθητή —"/>
               <label style={s.label}>Διάρκεια (λεπτά)</label>
               <input type="number" style={s.input} value={schedDuration} onChange={e => setSchedDuration(e.target.value === "" ? "" : Number(e.target.value))}/>
               {schedTime && <div style={{fontSize:13, color:"#888", marginTop:4}}>Λήξη: {addMinutesToTime(schedTime, schedDuration)}</div>}
@@ -989,6 +988,7 @@ export default function App() {
                       </span>
                       {stuFull && stuFull.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
                       {stuFull && stuFull.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>}
+                      {stuFull && stuFull.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}
                     </div>
                   </div>
                   <div style={{display:"flex", gap:4, marginLeft:8}}>
@@ -1317,6 +1317,63 @@ function ProgressCheck({ student, exercises, routes }) {
               <div style={s.tags}>{missingRt.map(r => <span key={r} style={s.missTag}>{r}</span>)}</div>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Pills shown next to a student's name (retrain / automatic / completed)
+function StudentBadges({ st }) {
+  return (
+    <>
+      {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
+      {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>}
+      {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}
+    </>
+  );
+}
+
+// Custom student selector (native <select> cannot show styled pills)
+function StudentPicker({ students, value, onChange, placeholder, extraOptions }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const fold = (t) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const selected = students.find(x => String(x.id) === String(value));
+  const extraSel = !selected ? (extraOptions || []).find(o => o.value === (value || "")) : null;
+  const query = fold(q);
+  const list = students
+    .filter(x => !query || fold(x.name).includes(query))
+    .sort((a, b) => (a.completed ? 1 : 0) - (b.completed ? 1 : 0) || a.name.localeCompare(b.name, 'el'));
+
+  function pick(v) { onChange(v); setOpen(false); setQ(""); }
+
+  return (
+    <div>
+      <button type="button" style={s.pickerBtn} onClick={() => setOpen(o => !o)}>
+        <span style={{flex:1, minWidth:0, display:"flex", alignItems:"center", flexWrap:"wrap", gap:4}}>
+          {selected ? (<><span style={{fontWeight:600}}>{selected.name}</span><StudentBadges st={selected}/></>)
+            : extraSel ? <span>{extraSel.label}</span>
+            : <span style={{color:"#999"}}>{placeholder || "— Επίλεξε μαθητή —"}</span>}
+        </span>
+        <span style={{color:"#888"}}>{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <div style={s.pickerPanel}>
+          <input style={s.pickerSearch} placeholder="🔍 Αναζήτηση..." value={q} onChange={e => setQ(e.target.value)}/>
+          <div style={s.pickerList}>
+            {!query && (extraOptions || []).map(o => (
+              <div key={"extra-" + o.value} style={(!selected && (value || "") === o.value) ? s.pickerRowActive : s.pickerRow} onClick={() => pick(o.value)}>
+                <span style={{color:"#555"}}>{o.label}</span>
+              </div>
+            ))}
+            {list.map(x => (
+              <div key={x.id} style={String(x.id) === String(value) ? s.pickerRowActive : s.pickerRow} onClick={() => pick(String(x.id))}>
+                <span style={{fontWeight:600}}>{x.name}</span><StudentBadges st={x}/>
+              </div>
+            ))}
+            {list.length === 0 && <div style={{padding:"12px", fontSize:13, color:"#999"}}>Δεν βρέθηκε μαθητής</div>}
+          </div>
         </div>
       )}
     </div>
@@ -1668,7 +1725,12 @@ const s = {
   formCard:{background:"white",borderRadius:14,padding:"20px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",gap:6},
   label:{fontSize:13,fontWeight:700,color:"#555",marginTop:8},
   input:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
-  smsOverrideSelect:{width:"100%",marginTop:5,border:"1px solid #dcdfff",borderRadius:6,padding:"5px 6px",fontSize:12,fontFamily:"inherit",background:"white",color:"#333"},
+  pickerBtn:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",background:"white",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontFamily:"inherit",textAlign:"left",color:"#333"},
+  pickerPanel:{border:"1.5px solid #e0e0e0",borderRadius:10,marginTop:6,background:"white",overflow:"hidden"},
+  pickerSearch:{border:"none",borderBottom:"1px solid #eee",padding:"10px 12px",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
+  pickerList:{maxHeight:260,overflowY:"auto"},
+  pickerRow:{padding:"10px 12px",fontSize:14,cursor:"pointer",borderTop:"1px solid #f3f3f3",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4,color:"#1a237e"},
+  pickerRowActive:{padding:"10px 12px",fontSize:14,cursor:"pointer",borderTop:"1px solid #f3f3f3",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4,color:"#1a237e",background:"#e8eaf6"},
   checkGrid:{display:"flex",flexWrap:"wrap",gap:7,marginBottom:4,alignItems:"flex-start"},
   checkActive:{background:"#3949ab",color:"white",border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
   checkInactive:{background:"#f0f0f0",color:"#555",border:"1.5px solid #e0e0e0",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
