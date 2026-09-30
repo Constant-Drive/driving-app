@@ -13,6 +13,8 @@ const DEFAULT_ROUTES = [
   "Κέντρο πόλης","Αυτοκινητόδρομος","Παραλιακή","Ορεινή διαδρομή","Σχολικές ζώνες",
 ].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 
+const OTHER_INSTRUCTORS = ["Ηλίας", "Αλέξης", "Γιώργος"];
+
 const DEFAULT_PHRASES = [
   "Έλεγξε τους καθρέφτες",
   "Βάλε φλας",
@@ -120,6 +122,7 @@ export default function App() {
   const [showSmsImport, setShowSmsImport] = useState(false);
   const [smsText, setSmsText] = useState("");
   const [smsDate, setSmsDate] = useState("");
+  const [smsOverrides, setSmsOverrides] = useState({});
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [lessonDate, setLessonDate] = useState(today());
   const [lessonDuration, setLessonDuration] = useState(90);
@@ -565,6 +568,8 @@ export default function App() {
   if (view === "student" && selectedStudent) {
     const st = selectedStudent;
     const sorted = [...st.lessons].sort((a,b) => b.date.localeCompare(a.date));
+    const otherLessons = st.otherLessons || {};
+    const otherTotal = OTHER_INSTRUCTORS.reduce((sum, name) => sum + (Number(otherLessons[name]) || 0), 0);
 
     function updateStudentExam(patch) {
       updateStudents(prev => prev.map(s => s.id === st.id ? { ...s, ...patch } : s));
@@ -610,9 +615,14 @@ export default function App() {
         <div style={s.container}>
           {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
-            <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
+            <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length + otherTotal}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
             <div style={s.summaryBox}><div style={s.summaryNum}>{Math.round(st.lessons.reduce((a,l) => a+l.duration, 0) / 45 * 10) / 10}</div><div style={s.summaryLbl}>Διδακτικές ώρες</div></div>
           </div>
+          {otherTotal > 0 && (
+            <div style={{fontSize:11, color:"#888", marginTop:-6}}>
+              Εκ των οποίων {otherTotal} με άλλους δασκάλους ({OTHER_INSTRUCTORS.filter(n => otherLessons[n] > 0).map(n => `${n}: ${otherLessons[n]}`).join(", ")})
+            </div>
+          )}
           {(() => {
             const pct = completionPct(st, exercises, routes);
             if (pct === null) return null;
@@ -628,6 +638,19 @@ export default function App() {
               </div>
             );
           })()}
+          <div style={s.formCard}>
+            <div style={{...s.sectionTitle, marginBottom:8}}>🧑‍🏫 Μαθήματα με άλλους δασκάλους</div>
+            <div style={{display:"flex", gap:8}}>
+              {OTHER_INSTRUCTORS.map(name => (
+                <div key={name} style={{flex:1}}>
+                  <label style={{...s.label, textAlign:"center", display:"block"}}>{name}</label>
+                  <input type="number" min="0" style={{...s.input, textAlign:"center"}}
+                    value={otherLessons[name] ?? ""}
+                    onChange={e => updateStudentExam({ otherLessons: { ...otherLessons, [name]: e.target.value === "" ? "" : Number(e.target.value) } })}/>
+                </div>
+              ))}
+            </div>
+          </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map((l, idx) => (
             <div key={l.id} style={s.lessonCard}>
@@ -798,16 +821,23 @@ export default function App() {
       const n = normalizeGreek(name).trim();
       if (!n) return null;
       return students.find(st => {
+        if (st.completed) return false;
         const sn = normalizeGreek(st.name);
         return sn.includes(n) || n.split(" ").some(w => w.length >= 3 && sn.includes(w));
       }) || null;
+    }
+
+    function resolveEntryStudent(en, i) {
+      if (smsOverrides[i] === "none") return null;
+      if (smsOverrides[i]) return students.find(s => String(s.id) === String(smsOverrides[i])) || null;
+      return matchStudent(en.name);
     }
 
     function importSms() {
       if (!smsParsed || smsParsed.entries.length === 0) return;
       const base = Date.now();
       const newEntries = smsParsed.entries.map((en, i) => {
-        const stu = matchStudent(en.name);
+        const stu = resolveEntryStudent(en, i);
         return {
           id: base + i,
           date: smsEffectiveDate,
@@ -820,7 +850,7 @@ export default function App() {
       });
       updateSchedule([...schedule, ...newEntries]);
       setSchedViewDate(smsEffectiveDate);
-      setSmsText(""); setSmsDate(""); setShowSmsImport(false);
+      setSmsText(""); setSmsDate(""); setShowSmsImport(false); setSmsOverrides({});
     }
 
     return (
@@ -874,20 +904,29 @@ export default function App() {
                 <div style={{marginTop:10}}>
                   <div style={{fontSize:12, fontWeight:700, color:"#555", marginBottom:6}}>Προεπισκόπηση ({smsParsed.entries.length} ραντεβού):</div>
                   {smsParsed.entries.map((en, i) => {
-                    const stu = matchStudent(en.name);
+                    const stu = resolveEntryStudent(en, i);
                     return (
                       <div key={i} style={{fontSize:13, padding:"6px 8px", background:"#f8f9ff", borderRadius:8, marginBottom:4}}>
-                        <b>{en.time}</b> ({en.duration + "'"}) — {stu ? <span style={{color:"#2e7d32"}}>✓ {stu.name}</span> : <span style={{color:"#e65100"}}>⚠ {en.name} (νέο όνομα)</span>}
-                        {en.notes && <span style={{color:"#888"}}> • {en.notes}</span>}
+                        <div>
+                          <b>{en.time}</b> ({en.duration + "'"}) — {stu ? <span style={{color:"#2e7d32"}}>✓ {stu.name}</span> : <span style={{color:"#e65100"}}>⚠ {en.name} (νέο όνομα)</span>}
+                          {en.notes && <span style={{color:"#888"}}> • {en.notes}</span>}
+                        </div>
+                        <select style={s.smsOverrideSelect} value={smsOverrides[i] || ""} onChange={e => setSmsOverrides(prev => ({ ...prev, [i]: e.target.value || undefined }))}>
+                          <option value="">Αυτόματη αντιστοίχιση ({en.name})</option>
+                          <option value="none">— Νέο όνομα (χωρίς αντιστοίχιση) —</option>
+                          {[...students].sort((a,b) => a.name.localeCompare(b.name, 'el')).map(st2 => (
+                            <option key={st2.id} value={st2.id}>{st2.name}{st2.completed ? " (Ολοκληρωμένος)" : ""}</option>
+                          ))}
+                        </select>
                       </div>
                     );
                   })}
-                  <div style={{fontSize:11, color:"#888", marginTop:4}}>✓ = αντιστοιχήθηκε με μαθητή σου, ⚠ = δεν βρέθηκε μαθητής (θα καταχωρηθεί μόνο το όνομα)</div>
+                  <div style={{fontSize:11, color:"#888", marginTop:4}}>✓ = αντιστοιχήθηκε με μαθητή σου, ⚠ = δεν βρέθηκε μαθητής. Οι ολοκληρωμένοι μαθητές δεν αντιστοιχίζονται αυτόματα — επίλεξέ τους χειροκίνητα από τη λίστα αν χρειάζεται.</div>
                 </div>
               )}
               <div style={{display:"flex", gap:10, marginTop:12}}>
                 <button style={{...s.btnPrimary, marginTop:0}} onClick={importSms} disabled={!smsParsed || smsParsed.entries.length === 0}>Εισαγωγή</button>
-                <button style={{...s.dialogCancel, flex:1}} onClick={() => { setShowSmsImport(false); setSmsText(""); setSmsDate(""); }}>Ακύρωση</button>
+                <button style={{...s.dialogCancel, flex:1}} onClick={() => { setShowSmsImport(false); setSmsText(""); setSmsDate(""); setSmsOverrides({}); }}>Ακύρωση</button>
               </div>
             </div>
           )}
@@ -1629,6 +1668,7 @@ const s = {
   formCard:{background:"white",borderRadius:14,padding:"20px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",gap:6},
   label:{fontSize:13,fontWeight:700,color:"#555",marginTop:8},
   input:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
+  smsOverrideSelect:{width:"100%",marginTop:5,border:"1px solid #dcdfff",borderRadius:6,padding:"5px 6px",fontSize:12,fontFamily:"inherit",background:"white",color:"#333"},
   checkGrid:{display:"flex",flexWrap:"wrap",gap:7,marginBottom:4,alignItems:"flex-start"},
   checkActive:{background:"#3949ab",color:"white",border:"none",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
   checkInactive:{background:"#f0f0f0",color:"#555",border:"1.5px solid #e0e0e0",borderRadius:8,padding:"6px 12px",fontSize:13,fontWeight:600,cursor:"pointer",textAlign:"left",width:"auto",flexShrink:0},
