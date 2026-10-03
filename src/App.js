@@ -132,6 +132,7 @@ export default function App() {
   const [lessonNotes, setLessonNotes] = useState("");
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [convertReturnView, setConvertReturnView] = useState(null);
+  const [showOtherRoutes, setShowOtherRoutes] = useState(false);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
   const [managerPhone, setManagerPhone] = useState("");
@@ -656,19 +657,26 @@ export default function App() {
                 </div>
               ))}
             </div>
-            <label style={{...s.label, marginTop:12}}>Διαδρομές που έγιναν με άλλους δασκάλους</label>
-            <div style={{fontSize:11, color:"#888", marginBottom:6}}>Μετράνε ως ολοκληρωμένες στον έλεγχο υποχρεωτικών</div>
-            <div style={s.checkGrid}>
-              {routes.map(r => {
-                const on = (st.otherRoutes || []).includes(r.name);
-                return (
-                  <button key={r.name}
-                    style={on ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive}
-                    onClick={() => updateStudentExam({ otherRoutes: on ? (st.otherRoutes || []).filter(n => n !== r.name) : [...(st.otherRoutes || []), r.name] })}
-                  >{r.name}</button>
-                );
-              })}
-            </div>
+            <button style={{...s.manageBtn, marginTop:10, textAlign:"left", display:"flex", justifyContent:"space-between"}} onClick={() => setShowOtherRoutes(v => !v)}>
+              <span>🗺️ Διαδρομές με άλλους δασκάλους{(st.otherRoutes || []).length > 0 ? ` (${(st.otherRoutes || []).length})` : ""}</span>
+              <span>{showOtherRoutes ? "▴" : "▾"}</span>
+            </button>
+            {showOtherRoutes && (
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:11, color:"#888", marginBottom:6}}>Μετράνε ως ολοκληρωμένες στον έλεγχο υποχρεωτικών</div>
+                <div style={s.checkGrid}>
+                  {routes.map(r => {
+                    const on = (st.otherRoutes || []).includes(r.name);
+                    return (
+                      <button key={r.name}
+                        style={on ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive}
+                        onClick={() => updateStudentExam({ otherRoutes: on ? (st.otherRoutes || []).filter(n => n !== r.name) : [...(st.otherRoutes || []), r.name] })}
+                      >{r.name}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map((l, idx) => (
