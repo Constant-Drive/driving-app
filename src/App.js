@@ -130,6 +130,7 @@ export default function App() {
   const [lessonRoutes, setLessonRoutes] = useState([]);
   const [lessonNotes, setLessonNotes] = useState("");
   const [convertingSchedId, setConvertingSchedId] = useState(null);
+  const [convertReturnView, setConvertReturnView] = useState(null);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
   const [managerPhone, setManagerPhone] = useState("");
@@ -356,13 +357,14 @@ export default function App() {
     scrollToRoutesSection();
   }
 
-  function convertScheduleToLesson(entry) {
+  function convertScheduleToLesson(entry, returnView) {
     const stu = students.find(x => String(x.id) === String(entry.studentId));
     if (!stu) { alert("Ο μαθητής έχει διαγραφεί."); return; }
     setSelectedStudent(stu);
     setLessonDate(entry.date); setLessonDuration(entry.duration != null ? entry.duration : 90); setLessonExercises([]);
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null);
     setConvertingSchedId(entry.id);
+    setConvertReturnView(typeof returnView === "string" ? returnView : null);
     setView("addLesson");
     scrollToRoutesSection();
   }
@@ -383,15 +385,18 @@ export default function App() {
     });
     setStudents(nextStudents);
     setSelectedStudent(nextStudents.find(s => s.id === selectedStudent.id));
+    let backTo = "student";
     if (convertingSchedId) {
       const nextSched = schedule.map(e => e.id === convertingSchedId ? { ...e, converted: true } : e);
       setSchedule(nextSched);
       persist(nextStudents, exercises, routes, nextSched);
       setConvertingSchedId(null);
+      if (convertReturnView) backTo = convertReturnView;
+      setConvertReturnView(null);
     } else {
       persist(nextStudents, exercises, routes);
     }
-    setView("student");
+    setView(backTo);
   }
 
   function deleteLesson(lid) {
@@ -745,7 +750,8 @@ export default function App() {
     function handleBack() {
       if (convertingSchedId) {
         setConvertingSchedId(null);
-        setView("schedule");
+        setView(convertReturnView || "schedule");
+        setConvertReturnView(null);
         return;
       }
       if (editLesson) {
@@ -813,6 +819,7 @@ export default function App() {
       .sort((a,b) => (a.time||"").localeCompare(b.time||""));
     const isToday = schedViewDate === today();
     const isPastDay = schedViewDate < today();
+    const unregCount = getUnregistered(schedule).length;
 
     const smsParsed = smsText.trim() ? parseSms(smsText) : null;
     const smsEffectiveDate = smsDate || (smsParsed && smsParsed.weekdayIdx !== null ? nextDateForWeekday(smsParsed.weekdayIdx) : today());
@@ -860,11 +867,13 @@ export default function App() {
           <StatusBadge />
           <div style={{position:"relative", flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
+            {unregCount > 0 && !showHeaderMenu && <span style={s.redDot}/>}
             {showHeaderMenu && (
               <div style={s.headerMenu}>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("home"); }}>👥 Μαθητές</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("unregistered"); }}>⏳ Μη καταχωρημένα{unregCount > 0 ? ` (${unregCount})` : ""}</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("income"); }}>📊 Έσοδα</button>
               </div>
             )}
@@ -1160,6 +1169,53 @@ export default function App() {
     );
   }
 
+  if (view === "unregistered") {
+    const list = getUnregistered(schedule);
+    return (
+      <div style={s.page}>
+        <div style={s.header}><div style={s.headerInner}>
+          <button style={s.back} onClick={() => setView("schedule")}>‹ Πίσω</button>
+          <div style={{flex:1}}><div style={s.appTitle}>⏳ Μη καταχωρημένα</div></div>
+          <StatusBadge />
+        </div></div>
+        <div style={s.container}>
+          <div style={{fontSize:12, color:"#888"}}>Ραντεβού που έχουν περάσει και δεν έχουν καταχωρηθεί ως μάθημα. Με το «Παράλειψη» αφαιρούνται από τη λίστα χωρίς να επηρεαστεί η αμοιβή.</div>
+          {list.length === 0 && (
+            <div style={s.empty}><div style={{fontSize:36}}>✅</div><div style={s.emptyText}>Όλα τα ραντεβού έχουν καταχωρηθεί</div></div>
+          )}
+          {list.map(e => {
+            const stuFull = students.find(x => String(x.id) === String(e.studentId));
+            return (
+              <div key={e.id} style={s.lessonCard}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", gap:8}}>
+                  <span style={s.pendingDateLink} onClick={() => openScheduleDate(e.date)}>{formatDate(e.date)} • {e.time}</span>
+                  <span style={{fontSize:12, color:"#aaa", whiteSpace:"nowrap"}}>{(e.duration != null ? e.duration : 90) + "'"}</span>
+                </div>
+                <div style={{display:"flex", alignItems:"center", flexWrap:"wrap", gap:4}}>
+                  <span>👤</span>
+                  <span style={{fontWeight:600, color: stuFull ? "#1a237e" : "#999"}}>{e.studentName}</span>
+                  {stuFull && <StudentBadges st={stuFull}/>}
+                </div>
+                {e.notes && <div style={s.lessonNotes}>{highlightMoney(e.notes)}</div>}
+                {stuFull ? (
+                  <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e, "unregistered")}>✓ Καταχώρηση ως μάθημα</button>
+                ) : (
+                  <div style={{fontSize:12, color:"#e65100"}}>⚠ Χωρίς αντιστοίχιση μαθητή — πάτησε την ημερομηνία για να ανοίξεις την ημέρα και να τον ορίσεις (✏️)</div>
+                )}
+                <button style={s.skipBtn} onClick={() => setConfirmDialog({
+                  message: "Να αφαιρεθεί από τη λίστα (δεν θα καταχωρηθεί ως μάθημα);",
+                  confirmLabel: "Παράλειψη",
+                  cancelLabel: "Άκυρο",
+                  onConfirm: () => updateSchedule(schedule.map(x => x.id === e.id ? { ...x, skipped: true } : x))
+                })}>🚫 Παράλειψη</button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (view === "income") {
     const monthEntries = schedule.filter(e => monthStrOf(e.date) === incomeMonth);
     const feeTotal = monthEntries.reduce((sum, e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0);
@@ -1321,6 +1377,17 @@ function ProgressCheck({ student, exercises, routes }) {
       )}
     </div>
   );
+}
+
+// Past appointments (with duration > 0) not yet registered as lessons and not skipped
+function getUnregistered(schedule) {
+  const todayStr = today();
+  const hhmm = new Date().toTimeString().slice(0, 5);
+  return schedule
+    .filter(e => !e.converted && !e.skipped
+      && (e.duration != null ? e.duration : 90) > 0
+      && (e.date < todayStr || (e.date === todayStr && (e.time || "00:00") <= hhmm)))
+    .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 }
 
 // Pills shown next to a student's name (retrain / automatic / completed)
@@ -1725,6 +1792,8 @@ const s = {
   formCard:{background:"white",borderRadius:14,padding:"20px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",gap:6},
   label:{fontSize:13,fontWeight:700,color:"#555",marginTop:8},
   input:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
+  redDot:{position:"absolute",top:-2,right:-2,width:10,height:10,borderRadius:"50%",background:"#e53935",border:"2px solid #1a237e",pointerEvents:"none"},
+  skipBtn:{background:"none",color:"#999",border:"1px solid #e0e0e0",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer",alignSelf:"flex-start"},
   pickerBtn:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",background:"white",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontFamily:"inherit",textAlign:"left",color:"#333"},
   pickerPanel:{border:"1.5px solid #e0e0e0",borderRadius:10,marginTop:6,background:"white",overflow:"hidden"},
   pickerSearch:{border:"none",borderBottom:"1px solid #eee",padding:"10px 12px",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
