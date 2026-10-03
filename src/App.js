@@ -60,6 +60,7 @@ function completionPct(student, exercises, routes) {
     (l.exercises||[]).forEach(e => doneEx.add(e));
     (l.routes||[]).forEach(r => doneRt.add(r));
   });
+  (student.otherRoutes||[]).forEach(r => doneRt.add(r));
   const done = reqEx.filter(e => doneEx.has(e)).length + reqRt.filter(r => doneRt.has(r)).length;
   return Math.round((done / total) * 100);
 }
@@ -654,6 +655,19 @@ export default function App() {
                     onChange={e => updateStudentExam({ otherLessons: { ...otherLessons, [name]: e.target.value === "" ? "" : Number(e.target.value) } })}/>
                 </div>
               ))}
+            </div>
+            <label style={{...s.label, marginTop:12}}>Διαδρομές που έγιναν με άλλους δασκάλους</label>
+            <div style={{fontSize:11, color:"#888", marginBottom:6}}>Μετράνε ως ολοκληρωμένες στον έλεγχο υποχρεωτικών</div>
+            <div style={s.checkGrid}>
+              {routes.map(r => {
+                const on = (st.otherRoutes || []).includes(r.name);
+                return (
+                  <button key={r.name}
+                    style={on ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive}
+                    onClick={() => updateStudentExam({ otherRoutes: on ? (st.otherRoutes || []).filter(n => n !== r.name) : [...(st.otherRoutes || []), r.name] })}
+                  >{r.name}</button>
+                );
+              })}
             </div>
           </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
@@ -1350,6 +1364,7 @@ function ProgressCheck({ student, exercises, routes }) {
     (l.exercises||[]).forEach(e => doneEx.add(e));
     (l.routes||[]).forEach(r => doneRt.add(r));
   });
+  (student.otherRoutes||[]).forEach(r => doneRt.add(r));
   const missingEx = reqEx.filter(e => !doneEx.has(e));
   const missingRt = reqRt.filter(r => !doneRt.has(r));
   const hasReq = reqEx.length + reqRt.length > 0;
