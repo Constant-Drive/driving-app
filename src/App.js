@@ -1582,22 +1582,75 @@ function SimSummary({ sum }) {
   );
 }
 
-// Settings: define the sub-checks of one exercise
+// Settings: define the sub-checks of one exercise (add, rename, delete, drag to reorder)
 function ChecksEditor({ checks, onChange }) {
   const [newCheck, setNewCheck] = useState("");
+  const [editingK, setEditingK] = useState(null);
+  const [editingVal, setEditingVal] = useState("");
+  const [dragK, setDragK] = useState(null);
+  const [overK, setOverK] = useState(null);
+
   function add() {
     const n = newCheck.trim();
     if (!n || checks.some(c => c.name === n)) return;
     onChange([...checks, { name: n }]);
     setNewCheck("");
   }
+  function saveEdit(k) {
+    const n = editingVal.trim();
+    if (!n || checks.some((c, i) => i !== k && c.name === n)) return;
+    onChange(checks.map((c, i) => i === k ? { ...c, name: n } : c));
+    setEditingK(null);
+  }
+  function moveCheck(from, to) {
+    if (from === null || to === null || from === to) return;
+    const next = [...checks];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onChange(next);
+  }
+  function handleTouchMove(e) {
+    if (dragK === null) return;
+    const t = e.touches[0];
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const row = el && el.closest('[data-check-idx]');
+    if (row) {
+      const idx = parseInt(row.getAttribute('data-check-idx'));
+      if (idx !== overK) setOverK(idx);
+    }
+  }
+  function handleTouchEnd() {
+    if (dragK !== null && overK !== null) moveCheck(dragK, overK);
+    setDragK(null); setOverK(null);
+  }
+
   return (
     <div style={s.checksBox}>
       {checks.length === 0 && <div style={{fontSize:12, color:"#888", marginBottom:6}}>Χωρίς έλεγχους η δοκιμασία δεν μπαίνει στην προσομοίωση.</div>}
       {checks.map((c, k) => (
-        <div key={c.name} style={s.checkEditRow}>
-          <span style={{flex:1, fontSize:13}}>{c.name}</span>
-          <button style={s.removeBtn} onClick={() => onChange(checks.filter((_, i) => i !== k))}>✕</button>
+        <div key={c.name} data-check-idx={k}
+          style={{...s.checkEditRow, borderRadius:6, background: overK === k && dragK !== null ? "#e8eaf6" : "transparent", opacity: dragK === k ? 0.4 : 1}}
+          onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (overK !== k) setOverK(k); }}
+          onDrop={e => { e.preventDefault(); e.stopPropagation(); moveCheck(dragK, k); setDragK(null); setOverK(null); }}
+        >
+          <span draggable
+            onDragStart={() => setDragK(k)}
+            onDragEnd={() => { setDragK(null); setOverK(null); }}
+            onTouchStart={() => setDragK(k)}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{...s.dragHandle, padding:"0 6px 0 0", fontSize:18}}
+            title="Σύρε για αλλαγή σειράς"
+          >≡</span>
+          {editingK === k
+            ? <input autoFocus style={{...s.input, flex:1, padding:"5px 8px", fontSize:13}} value={editingVal}
+                onChange={e => setEditingVal(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") saveEdit(k); if (e.key === "Escape") setEditingK(null); }}/>
+            : <span style={{flex:1, fontSize:13}}>{c.name}</span>}
+          {editingK === k
+            ? <button style={s.saveSmallBtn} onClick={() => saveEdit(k)}>✓</button>
+            : <button style={s.editSmallBtn} onClick={() => { setEditingK(k); setEditingVal(c.name); }}>✏️</button>}
+          <button style={s.removeBtn} onClick={() => { onChange(checks.filter((_, i) => i !== k)); if (editingK === k) setEditingK(null); }}>✕</button>
         </div>
       ))}
       <div style={s.addRow}>
