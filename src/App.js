@@ -695,6 +695,8 @@ export default function App() {
               )}
             </div>
 
+            <BookedLessons student={st} onChange={list => updateStudentExam({ bookedLessons: list })} setConfirmDialog={setConfirmDialog}/>
+
             <div style={s.formCard}>
               <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Ολοκλήρωση Εκπαίδευσης</div>
               {st.completed ? (
@@ -1391,6 +1393,79 @@ function getUnregistered(schedule) {
     .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 }
 
+// Future lessons booked with the school secretariat (entered manually); past ones are hidden
+function BookedLessons({ student, onChange, setConfirmDialog }) {
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [note, setNote] = useState("");
+  const all = student.bookedLessons || [];
+  const todayStr = today();
+  const upcoming = all
+    .filter(b => b.date >= todayStr)
+    .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+  const exam = student.examDate;
+  const beforeExam = exam ? upcoming.filter(b => b.date <= exam).length : 0;
+  const examShort = exam ? `${Number(exam.split("-")[2])}/${Number(exam.split("-")[1])}` : "";
+
+  function add() {
+    if (!date) return;
+    onChange([...all, { id: Date.now(), date, time, note: note.trim() }]);
+    setDate(""); setNote("");
+  }
+  function remove(id) {
+    setConfirmDialog({
+      message: "Να διαγραφεί αυτό το κλεισμένο μάθημα;",
+      confirmLabel: "Διαγραφή",
+      cancelLabel: "Άκυρο",
+      onConfirm: () => onChange(all.filter(b => b.id !== id))
+    });
+  }
+
+  return (
+    <div style={s.formCard}>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6}}>
+        <div style={{...s.sectionTitle, marginBottom:0}}>📋 Κλεισμένα μαθήματα (γραμματεία)</div>
+        <button style={s.sortBtn} onClick={() => setOpen(o => !o)}>{open ? "✕" : "＋"}</button>
+      </div>
+      <div style={{fontSize:12, color:"#888", marginBottom:6}}>
+        {upcoming.length === 0 ? "Δεν υπάρχουν μελλοντικά κλεισμένα μαθήματα" : `${upcoming.length} μελλοντικά μαθήματα`}
+        {exam && upcoming.length > 0 ? ` • ${beforeExam} έως την εξέταση (${examShort})` : ""}
+        {!exam && upcoming.length > 0 ? " • όρισε ημερομηνία εξέτασης για να δεις πόσα προηγούνται" : ""}
+      </div>
+
+      {open && (
+        <div style={{background:"#f8f9ff", borderRadius:10, padding:10, marginBottom:8}}>
+          <div style={s.row2}>
+            <div style={{flex:1, minWidth:0}}>
+              <label style={s.label}>Ημερομηνία</label>
+              <input type="date" style={{...s.input, maxWidth:"100%"}} value={date} onChange={e => setDate(e.target.value)}/>
+            </div>
+            <div style={{flex:1, minWidth:0}}>
+              <label style={s.label}>Ώρα (προαιρετικά)</label>
+              <input type="time" style={{...s.input, textAlign:"left", maxWidth:"100%"}} value={time} onChange={e => setTime(e.target.value)}/>
+            </div>
+          </div>
+          <label style={s.label}>Σημείωση (προαιρετικά)</label>
+          <input style={s.input} placeholder="π.χ. με Ηλία" value={note} onChange={e => setNote(e.target.value)}/>
+          <button style={{...s.btnPrimary, marginTop:10, width:"100%"}} onClick={add} disabled={!date}>Προσθήκη</button>
+        </div>
+      )}
+
+      {upcoming.map(b => (
+        <div key={b.id} style={s.bookedRow}>
+          <div style={{flex:1, minWidth:0}}>
+            <div style={{fontWeight:600, fontSize:14, color:"#1a237e"}}>{formatDate(b.date)}{b.time ? " • " + b.time : ""}</div>
+            {b.note && <div style={{fontSize:12, color:"#777"}}>{b.note}</div>}
+          </div>
+          {exam && b.date > exam && <span style={s.examBadgeSoon}>⚠ μετά την εξέταση</span>}
+          <button style={s.removeBtn} onClick={() => remove(b.id)}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Exam date pill: purple normally, red when within 7 days, grey when past
 function ExamBadge({ date }) {
   if (!date) return null;
@@ -1841,6 +1916,7 @@ const s = {
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
   fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer"},
   typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
+  bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgePast:{fontSize:11,fontWeight:600,color:"#757575",background:"#eeeeee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
