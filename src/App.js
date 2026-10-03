@@ -43,8 +43,9 @@ function today() {
 function normalizeList(arr) {
   if (!arr) return [];
   return arr.map(it => typeof it === "string"
-    ? { name: it, reqNew: false, reqRetrain: false, defaultExercises: [] }
-    : { name: it.name, reqNew: !!it.reqNew, reqRetrain: !!it.reqRetrain, defaultExercises: Array.isArray(it.defaultExercises) ? it.defaultExercises : [] });
+    ? { name: it, reqNew: false, reqRetrain: false, defaultExercises: [], checks: [] }
+    : { name: it.name, reqNew: !!it.reqNew, reqRetrain: !!it.reqRetrain, defaultExercises: Array.isArray(it.defaultExercises) ? it.defaultExercises : [],
+        checks: Array.isArray(it.checks) ? it.checks.map(c => ({ name: typeof c === "string" ? c : c.name })) : [] });
 }
 function names(arr) { return normalizeList(arr).map(it => it.name); }
 
@@ -130,6 +131,8 @@ export default function App() {
   const [lessonExercises, setLessonExercises] = useState([]);
   const [lessonRoutes, setLessonRoutes] = useState([]);
   const [lessonNotes, setLessonNotes] = useState("");
+  const [lessonIsSim, setLessonIsSim] = useState(false);
+  const [lessonSimResults, setLessonSimResults] = useState({});
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [convertReturnView, setConvertReturnView] = useState(null);
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
@@ -356,6 +359,7 @@ export default function App() {
   function startAddLesson() {
     setLessonDate(today()); setLessonDuration(90); setLessonExercises([]);
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null); setView("addLesson");
+    setLessonIsSim(false); setLessonSimResults({});
     scrollToRoutesSection();
   }
 
@@ -365,6 +369,7 @@ export default function App() {
     setSelectedStudent(stu);
     setLessonDate(entry.date); setLessonDuration(entry.duration != null ? entry.duration : 90); setLessonExercises([]);
     setLessonRoutes([]); setLessonNotes(""); setEditLesson(null);
+    setLessonIsSim(false); setLessonSimResults({});
     setConvertingSchedId(entry.id);
     setConvertReturnView(typeof returnView === "string" ? returnView : null);
     setView("addLesson");
@@ -375,11 +380,13 @@ export default function App() {
     setLessonDate(lesson.date); setLessonDuration(lesson.duration);
     setLessonExercises(lesson.exercises); setLessonRoutes(lesson.routes);
     setLessonNotes(lesson.notes); setEditLesson(lesson.id); setView("addLesson");
+    setLessonIsSim(!!lesson.simulation); setLessonSimResults(lesson.simulation ? lesson.simulation.results : {});
     scrollToRoutesSection();
   }
 
   function saveLesson() {
     const lesson = { id: editLesson||Date.now(), date: lessonDate, duration: lessonDuration === "" ? 90 : lessonDuration, exercises: lessonExercises, routes: lessonRoutes, notes: lessonNotes };
+    if (lessonIsSim) lesson.simulation = { results: lessonSimResults, summary: computeSim(exercises, lessonSimResults) };
     const nextStudents = students.map(s => {
       if (s.id !== selectedStudent.id) return s;
       const lessons = editLesson ? s.lessons.map(l => l.id===editLesson ? lesson : l) : [...s.lessons, lesson];
@@ -631,6 +638,12 @@ export default function App() {
             </div>
           )}
           {(() => {
+            const simLessons = st.lessons.filter(l => l.simulation).sort((a, b) => b.date.localeCompare(a.date));
+            if (simLessons.length === 0) return null;
+            const sm = simLessons[0].simulation.summary;
+            return <div style={{fontSize:12, color:"#666"}}>🎯 Τελευταία προσομοίωση ({formatDate(simLessons[0].date)}): ✓ {sm.ok} • ✗ {sm.fail}</div>;
+          })()}
+          {(() => {
             const pct = completionPct(st, exercises, routes);
             if (pct === null) return null;
             return (
@@ -688,6 +701,10 @@ export default function App() {
               </div></div>
               {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
               {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
+              {l.simulation && <div>
+                <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΠΡΟΣΟΜΟΙΩΣΗ ΕΞΕΤΑΣΗΣ:</div>
+                <SimSummary sum={l.simulation.summary}/>
+              </div>}
               {l.notes && <div>
                 <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΣΗΜΕΙΩΣΕΙΣ:</div>
                 <div style={s.lessonNotes}>{l.notes}</div>
@@ -826,6 +843,11 @@ export default function App() {
         <div style={s.checkGrid}>{routes.map(r => <button key={r.name} style={lessonRoutes.includes(r.name) ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive} onClick={() => toggleRouteWithDefaults(r)}>{r.name}</button>)}</div>
         <label style={s.label}>Δοκιμασίες</label>
         <div style={s.checkGrid}>{exercises.map(ex => <button key={ex.name} style={lessonExercises.includes(ex.name) ? s.checkActive : s.checkInactive} onClick={() => toggleArr(lessonExercises, setLessonExercises, ex.name)}>{ex.name}</button>)}</div>
+        <label style={s.label}>Προσομοίωση εξέτασης</label>
+        <button style={lessonIsSim ? s.simToggleOn : s.simToggleOff} onClick={() => setLessonIsSim(v => !v)}>
+          🎯 {lessonIsSim ? "Ενεργή — πάτησε για απενεργοποίηση" : "Ενεργοποίηση προσομοίωσης"}
+        </button>
+        {lessonIsSim && <SimulationEditor exercises={exercises} results={lessonSimResults} onChange={setLessonSimResults}/>}
         <label style={s.label}>Σημειώσεις</label>
         <textarea style={{...s.input, height:80, resize:"vertical"}} placeholder="π.χ. Καλή πρόοδος στις στροφές..." value={lessonNotes} onChange={e => setLessonNotes(e.target.value)}/>
         <button style={s.btnPrimary} onClick={saveLesson}>Αποθήκευση</button>
@@ -1351,7 +1373,7 @@ export default function App() {
             <div style={{...s.sectionTitle, marginBottom:0}}>🏁 Δοκιμασίες</div>
             <button style={s.sortBtn} onClick={() => updateExercises([...exercises].sort((a,b) => a.name.localeCompare(b.name, 'el')))}>Α→Ω</button>
           </div>
-          <EditableList items={exercises} onUpdate={updateExercises}/>
+          <EditableList items={exercises} onUpdate={updateExercises} withChecks/>
         </div>
       </div>
     </div>
@@ -1531,6 +1553,105 @@ function ExamBadge({ date }) {
   return <span style={style}>{text}</span>;
 }
 
+// Result of an exam simulation: counts and list of errors
+function computeSim(exercises, results) {
+  let ok = 0, fail = 0, total = 0;
+  const failures = [];
+  exercises.forEach(ex => {
+    const exRes = (results && results[ex.name]) || {};
+    (ex.checks || []).forEach(c => {
+      total++;
+      const v = exRes[c.name];
+      if (v === "ok") ok++;
+      else if (v === "fail") {
+        fail++;
+        failures.push({ exercise: ex.name, check: c.name });
+      }
+    });
+  });
+  return { total, ok, fail, unanswered: total - ok - fail, failures };
+}
+
+function SimSummary({ sum }) {
+  if (!sum) return null;
+  return (
+    <div style={{marginTop:8}}>
+      <div style={{fontSize:14, fontWeight:700, color:"#4527a0", margin:"6px 2px"}}>✓ {sum.ok} • ✗ {sum.fail}{sum.unanswered > 0 ? ` • αναπάντητοι ${sum.unanswered}` : ""}</div>
+      {sum.failures.map((f, i) => <div key={i} style={s.simFailureRow}>✗ {f.exercise} — {f.check}</div>)}
+    </div>
+  );
+}
+
+// Settings: define the sub-checks of one exercise
+function ChecksEditor({ checks, onChange }) {
+  const [newCheck, setNewCheck] = useState("");
+  function add() {
+    const n = newCheck.trim();
+    if (!n || checks.some(c => c.name === n)) return;
+    onChange([...checks, { name: n }]);
+    setNewCheck("");
+  }
+  return (
+    <div style={s.checksBox}>
+      {checks.length === 0 && <div style={{fontSize:12, color:"#888", marginBottom:6}}>Χωρίς έλεγχους η δοκιμασία δεν μπαίνει στην προσομοίωση.</div>}
+      {checks.map((c, k) => (
+        <div key={c.name} style={s.checkEditRow}>
+          <span style={{flex:1, fontSize:13}}>{c.name}</span>
+          <button style={s.removeBtn} onClick={() => onChange(checks.filter((_, i) => i !== k))}>✕</button>
+        </div>
+      ))}
+      <div style={s.addRow}>
+        <input style={{...s.input, flex:1, padding:"6px 8px", fontSize:13}} placeholder="Νέος έλεγχος..." value={newCheck}
+          onChange={e => setNewCheck(e.target.value)} onKeyDown={e => { if (e.key === "Enter") add(); }}/>
+        <button style={s.addBtn} onClick={add}>+</button>
+      </div>
+    </div>
+  );
+}
+
+// Lesson form: go through exercises that have checks, mark each ✓ / ✗
+function SimulationEditor({ exercises, results, onChange }) {
+  const [openEx, setOpenEx] = useState(null);
+  const simExercises = exercises.filter(e => (e.checks || []).length > 0);
+  if (simExercises.length === 0) {
+    return <div style={{fontSize:12, color:"#e65100", marginTop:8}}>Δεν έχουν οριστεί έλεγχοι. Πρόσθεσέ τους στις Ρυθμίσεις (⚙️) → Δοκιμασίες → «✅ Έλεγχοι εξέτασης».</div>;
+  }
+  function setCheck(exName, checkName, value) {
+    const exRes = { ...(results[exName] || {}) };
+    if (exRes[checkName] === value) delete exRes[checkName]; else exRes[checkName] = value;
+    onChange({ ...results, [exName]: exRes });
+  }
+  const sum = computeSim(exercises, results);
+  return (
+    <div style={{marginTop:8}}>
+      {simExercises.map(ex => {
+        const exRes = results[ex.name] || {};
+        const answered = ex.checks.filter(c => exRes[c.name]).length;
+        const failN = ex.checks.filter(c => exRes[c.name] === "fail").length;
+        const isOpen = openEx === ex.name;
+        return (
+          <div key={ex.name} style={s.simEx}>
+            <div style={s.simExHead} onClick={() => setOpenEx(isOpen ? null : ex.name)}>
+              <span style={{fontWeight:700, flex:1}}>{ex.name}</span>
+              {failN > 0 && <span style={{color:"#c62828", fontWeight:700, fontSize:12}}>✗{failN}</span>}
+              <span style={s.simCount}>{answered}/{ex.checks.length}</span>
+              <span>{isOpen ? "▴" : "▾"}</span>
+            </div>
+            {isOpen && ex.checks.map(c => (
+              <div key={c.name} style={s.simCheckRow}>
+                <span style={{flex:1}}>{c.name}</span>
+                <button style={exRes[c.name] === "ok" ? s.simOkOn : s.simBtnOff} onClick={() => setCheck(ex.name, c.name, "ok")}>✓</button>
+                <button style={exRes[c.name] === "fail" ? s.simFailOn : s.simBtnOff} onClick={() => setCheck(ex.name, c.name, "fail")}>✗</button>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      <SimSummary sum={sum}/>
+    </div>
+  );
+}
+
 // Pills shown next to a student's name (retrain / automatic / completed)
 function StudentBadges({ st }) {
   return (
@@ -1604,7 +1725,7 @@ function NotesToggle({ notes }) {
   );
 }
 
-function EditableList({ items, onUpdate, linkOptions }) {
+function EditableList({ items, onUpdate, linkOptions, withChecks }) {
   const [editingIdx, setEditingIdx] = useState(null);
   const [editingVal, setEditingVal] = useState("");
   const [newItem, setNewItem] = useState("");
@@ -1612,11 +1733,13 @@ function EditableList({ items, onUpdate, linkOptions }) {
   const [dragIdx, setDragIdx] = useState(null);
   const [overIdx, setOverIdx] = useState(null);
   const [linkOpenIdx, setLinkOpenIdx] = useState(null);
+  const [checksOpenIdx, setChecksOpenIdx] = useState(null);
   function startEdit(i) { setEditingIdx(i); setEditingVal(items[i].name); }
   function saveEdit(i) { if (!editingVal.trim()) return; const next=[...items]; next[i]={...next[i], name:editingVal.trim()}; onUpdate(next); setEditingIdx(null); }
   function remove(i) { onUpdate(items.filter((_,idx)=>idx!==i)); if(editingIdx===i) setEditingIdx(null); setPendingRemove(null); }
-  function addItem() { if(!newItem.trim()) return; onUpdate([...items, {name:newItem.trim(), reqNew:false, reqRetrain:false, defaultExercises:[]}]); setNewItem(""); }
+  function addItem() { if(!newItem.trim()) return; onUpdate([...items, {name:newItem.trim(), reqNew:false, reqRetrain:false, defaultExercises:[], checks:[]}]); setNewItem(""); }
   function toggleReq(i, key) { const next=[...items]; next[i]={...next[i], [key]:!next[i][key]}; onUpdate(next); }
+  function updateChecks(i, checks) { const next = [...items]; next[i] = { ...next[i], checks }; onUpdate(next); }
   function toggleDefaultExercise(i, exName) {
     const next = [...items];
     const cur = next[i].defaultExercises || [];
@@ -1712,6 +1835,14 @@ function EditableList({ items, onUpdate, linkOptions }) {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+          {withChecks && (
+            <div style={{marginLeft:34, marginTop:6}}>
+              <button style={s.linkToggleBtn} onClick={() => setChecksOpenIdx(checksOpenIdx === i ? null : i)}>
+                ✅ Έλεγχοι εξέτασης{(item.checks || []).length > 0 ? ` (${item.checks.length})` : ""}
+              </button>
+              {checksOpenIdx === i && <ChecksEditor checks={item.checks || []} onChange={checks => updateChecks(i, checks)}/>}
             </div>
           )}
         </div>
@@ -1975,6 +2106,18 @@ const s = {
   calDayAfter:{background:"#c62828",color:"white"},
   calDayExam:{background:"#ede7f6",color:"#4527a0",border:"2px solid #4527a0"},
   calDayToday:{border:"2px solid #2e7d32"},
+  simEx:{border:"1px solid #e8eaf6",borderRadius:10,marginBottom:6,overflow:"hidden",background:"white"},
+  simExHead:{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:"#f5f6fb",cursor:"pointer",fontSize:14,color:"#1a237e"},
+  simCount:{fontSize:12,color:"#888",fontWeight:600},
+  simCheckRow:{display:"flex",alignItems:"center",gap:6,padding:"8px 12px",borderTop:"1px solid #f0f0f0",fontSize:13},
+  simBtnOff:{width:40,height:34,borderRadius:8,border:"1px solid #e0e0e0",background:"#f5f5f5",color:"#999",fontSize:16,fontWeight:700,cursor:"pointer"},
+  simOkOn:{width:40,height:34,borderRadius:8,border:"1px solid #2e7d32",background:"#2e7d32",color:"white",fontSize:16,fontWeight:700,cursor:"pointer"},
+  simFailOn:{width:40,height:34,borderRadius:8,border:"1px solid #c62828",background:"#c62828",color:"white",fontSize:16,fontWeight:700,cursor:"pointer"},
+  simToggleOff:{background:"#ede7f6",color:"#4527a0",border:"1px solid #d1c4e9",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
+  simToggleOn:{background:"#4527a0",color:"white",border:"1px solid #4527a0",borderRadius:10,padding:"11px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"},
+  simFailureRow:{fontSize:12,color:"#555",padding:"3px 2px"},
+  checksBox:{background:"#faf5ff",borderRadius:10,padding:10,marginTop:6},
+  checkEditRow:{display:"flex",alignItems:"center",gap:6,padding:"5px 0"},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
