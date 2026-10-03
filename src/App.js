@@ -641,7 +641,7 @@ export default function App() {
             const simLessons = st.lessons.filter(l => l.simulation).sort((a, b) => b.date.localeCompare(a.date));
             if (simLessons.length === 0) return null;
             const sm = simLessons[0].simulation.summary;
-            return <div style={{fontSize:12, color:"#666"}}>🎯 Τελευταία προσομοίωση ({formatDate(simLessons[0].date)}): ✓ {sm.ok} • ✗ {sm.fail}</div>;
+            return <div style={{fontSize:12, color:"#666"}}>🎯 Τελευταία προσομοίωση ({formatDate(simLessons[0].date)}): <span style={{color:"#2e7d32", fontWeight:700}}>✓ {sm.ok}</span> • <span style={{color:"#c62828", fontWeight:700}}>✗ {sm.fail}</span></div>;
           })()}
           {(() => {
             const pct = completionPct(st, exercises, routes);
@@ -1576,8 +1576,13 @@ function SimSummary({ sum }) {
   if (!sum) return null;
   return (
     <div style={{marginTop:8}}>
-      <div style={{fontSize:14, fontWeight:700, color:"#4527a0", margin:"6px 2px"}}>✓ {sum.ok} • ✗ {sum.fail}{sum.unanswered > 0 ? ` • αναπάντητοι ${sum.unanswered}` : ""}</div>
-      {sum.failures.map((f, i) => <div key={i} style={s.simFailureRow}>✗ {f.exercise} — {f.check}</div>)}
+      <div style={{fontSize:14, fontWeight:700, margin:"6px 2px"}}>
+        <span style={{color:"#2e7d32"}}>✓ {sum.ok}</span>
+        <span style={{color:"#999"}}> • </span>
+        <span style={{color:"#c62828"}}>✗ {sum.fail}</span>
+        {sum.unanswered > 0 && <span style={{color:"#999"}}> • αναπάντητοι {sum.unanswered}</span>}
+      </div>
+      {sum.failures.map((f, i) => <div key={i} style={s.simFailureRow}><span style={{color:"#c62828", fontWeight:700}}>✗</span> {f.exercise} — {f.check}</div>)}
     </div>
   );
 }
