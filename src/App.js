@@ -489,7 +489,7 @@ export default function App() {
           return (
             <div style={s.nextCard} onClick={() => exists && openStudentFromSchedule(next.studentId)}>
               <div style={s.nextLabel}>⏭️ Επόμενο μάθημα</div>
-              <div style={s.nextMain}>{next.studentName}</div>
+              <div style={s.nextMain}>{next.studentName} {(() => { const ns = students.find(x => String(x.id) === String(next.studentId)); return ns && ns.examDate ? <ExamBadge date={ns.examDate}/> : null; })()}</div>
               <div style={s.nextWhen}>{isToday ? "Σήμερα" : formatDate(next.date)} • 🕐 {next.time}</div>
             </div>
           );
@@ -510,7 +510,7 @@ export default function App() {
             <div key={st.id} style={s.studentCard} onClick={() => openStudent(st)}>
               <div style={s.studentAvatar}>{st.name.charAt(0).toUpperCase()}</div>
               <div style={s.studentInfo}>
-                <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}</div>
+                <div style={s.studentName}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπαίδευση</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>} {st.examDate && <ExamBadge date={st.examDate}/>}</div>
                 {st.phone && <div style={s.studentPhone}>{st.phone}</div>}
                 <div style={s.studentMeta}>
                   {st.lessons.length} μαθήματα
@@ -600,7 +600,7 @@ export default function App() {
           <div style={{maxWidth:600, margin:"0 auto", display:"flex", alignItems:"center", gap:12}}>
             <button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button>
             <div style={{flex:1}}>
-              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκλήρωσε</span>}</div>
+              <div style={s.appTitle}>{st.name} {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>} {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>} {st.completed && <span style={s.completedBadge}>✅ Ολοκλήρωσε</span>} {st.examDate && <ExamBadge date={st.examDate}/>}</div>
               {st.phone && <div style={s.appSub}>{st.phone}</div>}
               {st.job && <div style={s.appSub}>💼 {st.job}</div>}
             </div>
@@ -998,6 +998,7 @@ export default function App() {
                       {stuFull && stuFull.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
                       {stuFull && stuFull.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>}
                       {stuFull && stuFull.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}
+                      {stuFull && stuFull.examDate && <ExamBadge date={stuFull.examDate}/>}
                     </div>
                   </div>
                   <div style={{display:"flex", gap:4, marginLeft:8}}>
@@ -1268,7 +1269,7 @@ export default function App() {
               <span>
                 <span style={s.pendingDateLink} onClick={() => openScheduleDate(e.date)}>{formatDate(e.date)} • {e.time}</span>
                 {" — "}
-                <span style={s.pendingNameLink} onClick={() => openStudentFromSchedule(e.studentId)}>{e.studentName}</span>
+                <span style={s.pendingNameLink} onClick={() => openStudentFromSchedule(e.studentId)}>{e.studentName}</span>{(() => { const ps = students.find(x => String(x.id) === String(e.studentId)); return ps && ps.examDate ? <ExamBadge date={ps.examDate}/> : null; })()}
               </span>
               <span style={{fontWeight:800, color:"#e65100"}}>{formatEuro(sumMoney(e.notes))}</span>
             </div>
@@ -1390,6 +1391,21 @@ function getUnregistered(schedule) {
     .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
 }
 
+// Exam date pill: purple normally, red when within 7 days, grey when past
+function ExamBadge({ date }) {
+  if (!date) return null;
+  const [, m, d] = date.split("-").map(Number);
+  const diff = -daysAgo(date);
+  const short = `${d}/${m}`;
+  let text = `🎓 Εξέταση ${short}`;
+  let style = s.examBadge;
+  if (diff < 0) { style = s.examBadgePast; text = `🎓 ${short}`; }
+  else if (diff === 0) { style = s.examBadgeSoon; text = "🎓 Εξέταση σήμερα"; }
+  else if (diff === 1) { style = s.examBadgeSoon; text = "🎓 Εξέταση αύριο"; }
+  else if (diff <= 7) { style = s.examBadgeSoon; text = `🎓 Εξέταση ${short} (σε ${diff} μ.)`; }
+  return <span style={style}>{text}</span>;
+}
+
 // Pills shown next to a student's name (retrain / automatic / completed)
 function StudentBadges({ st }) {
   return (
@@ -1397,6 +1413,7 @@ function StudentBadges({ st }) {
       {st.type === "retrain" && <span style={s.typeBadge}>🔄 Μετεκπ.</span>}
       {st.automatic && <span style={s.autoBadge}>⚙️ Αυτόματο</span>}
       {st.completed && <span style={s.completedBadge}>✅ Ολοκληρωμένος</span>}
+      {st.examDate && <ExamBadge date={st.examDate}/>}
     </>
   );
 }
@@ -1824,6 +1841,9 @@ const s = {
   totalNum:{fontSize:20,fontWeight:800,color:"#1a237e"},
   fabSecondary:{background:"white",color:"#1a237e",border:"2px solid #1a237e",borderRadius:14,padding:"12px 20px",fontSize:15,fontWeight:700,cursor:"pointer"},
   typeBadge:{fontSize:11,fontWeight:600,color:"#e65100",background:"#fff3e0",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
+  examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
+  examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
+  examBadgePast:{fontSize:11,fontWeight:600,color:"#757575",background:"#eeeeee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   autoBadge:{fontSize:11,fontWeight:600,color:"#00695c",background:"#e0f2f1",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   completedBadge:{fontSize:11,fontWeight:600,color:"#2e7d32",background:"#e8f5e9",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   sectionDivider:{fontSize:12,fontWeight:700,color:"#2e7d32",margin:"14px 2px 2px",textTransform:"uppercase",letterSpacing:0.3},
