@@ -673,6 +673,7 @@ export default function App() {
               </div>
             );
           })()}
+          <ProgressCheck student={st} exercises={exercises} routes={routes} />
           <div style={s.formCard}>
             <div style={{...s.sectionTitle, marginBottom:8}}>🧑‍🏫 Μαθήματα με άλλους δασκάλους</div>
             <div style={{display:"flex", gap:8}}>
@@ -731,8 +732,6 @@ export default function App() {
             </div>
           ))}
           <div style={{display:"flex", flexDirection:"column", gap:12}}>
-            <ProgressCheck student={st} exercises={exercises} routes={routes} />
-
             <div style={s.formCard}>
               <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Εξετάσεις</div>
               <label style={s.label}>Ημερομηνία εξέτασης</label>
