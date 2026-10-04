@@ -1,8 +1,19 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { QUESTIONS } from "./questions";
 
 const DATA_DOC = doc(db, "app", "data");
+const QUESTION_CATS = [...new Set(QUESTIONS.map(q => q.c))];
+
+function shuffleArr(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 const DEFAULT_EXERCISES = [
   "Εκκίνηση / Στάση","Στροφές","Παρκάρισμα παράλληλο","Παρκάρισμα κάθετο",
@@ -136,6 +147,12 @@ export default function App() {
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [convertReturnView, setConvertReturnView] = useState(null);
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
+  const [qCat, setQCat] = useState("");
+  const [qDeck, setQDeck] = useState([]);
+  const [qCurrent, setQCurrent] = useState(null);
+  const [qShow, setQShow] = useState(false);
+  const [qAuto, setQAuto] = useState(false);
+  const [questionsReturn, setQuestionsReturn] = useState(null);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
   const [managerPhone, setManagerPhone] = useState("");
@@ -465,6 +482,7 @@ export default function App() {
               <div style={s.headerMenu}>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setQuestionsReturn(view); setView("questions"); }}>❓ Ερωτήσεις εξέτασης</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("settings"); }}>⚙️ Ρυθμίσεις</button>
               </div>
             )}
@@ -627,6 +645,7 @@ export default function App() {
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); startAddLesson(); }}>＋ Νέο Μάθημα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setQuestionsReturn(view); setView("questions"); }}>❓ Ερωτήσεις εξέτασης</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️ Μετάβαση κάτω</button>
                 </div>
               )}
@@ -1229,6 +1248,63 @@ export default function App() {
         )}
       </div>
     </div>
+    );
+  }
+
+  if (view === "questions") {
+    const pool = QUESTIONS.map((q, i) => i).filter(i => !qCat || QUESTIONS[i].c === qCat);
+    const remaining = qDeck.filter(i => pool.includes(i)).length;
+    const cur = qCurrent !== null ? QUESTIONS[qCurrent] : null;
+    function nextQuestion() {
+      let deck = qDeck.filter(i => pool.includes(i));
+      if (deck.length === 0) {
+        deck = shuffleArr(pool);
+        if (deck.length > 1 && deck[0] === qCurrent) deck.push(deck.shift());
+      }
+      const [next, ...rest] = deck;
+      setQCurrent(next); setQDeck(rest); setQShow(false);
+      if (qAuto) speak(QUESTIONS[next].q);
+    }
+    return (
+      <div style={s.page}>
+        <div style={s.header}><div style={s.headerInner}>
+          <button style={s.back} onClick={() => setView(questionsReturn || "home")}>‹ Πίσω</button>
+          <div style={{flex:1}}><div style={s.appTitle}>❓ Ερωτήσεις εξέτασης</div></div>
+        </div></div>
+        <div style={s.container}>
+          <select style={s.input} value={qCat} onChange={e => { setQCat(e.target.value); setQDeck([]); setQCurrent(null); setQShow(false); }}>
+            <option value="">{`Όλες οι κατηγορίες (${QUESTIONS.length})`}</option>
+            {QUESTION_CATS.map(c => <option key={c} value={c}>{`${c} (${QUESTIONS.filter(q => q.c === c).length})`}</option>)}
+          </select>
+
+          <div style={s.qCard}>
+            {cur ? (
+              <>
+                <div style={s.qCat}>{cur.c}{cur.x && <span style={s.extraPill}>➕ Εκτός PDF</span>}</div>
+                <div style={s.qText}>{cur.q}</div>
+              </>
+            ) : (
+              <div style={{color:"#999", textAlign:"center"}}>Πάτησε «Τυχαία ερώτηση» για να ξεκινήσεις</div>
+            )}
+          </div>
+          {cur && qShow && <div style={s.qAnswer}>{cur.a}</div>}
+
+          <button style={{...s.btnPrimary, marginTop:0, padding:"16px", fontSize:17}} onClick={nextQuestion}>🎲 Τυχαία ερώτηση</button>
+
+          {cur && (
+            <div style={{display:"flex", gap:10}}>
+              <button style={{...s.manageBtn, flex:1, width:"auto"}} onClick={() => setQShow(v => !v)}>{qShow ? "🙈 Κρύψε απάντηση" : "👁️ Δείξε απάντηση"}</button>
+              <button style={{...s.manageBtn, flex:1, width:"auto"}} onClick={() => speak(qShow ? cur.a : cur.q)}>{qShow ? "🗣️ Εκφώνηση απάντησης" : "🗣️ Εκφώνηση ερώτησης"}</button>
+            </div>
+          )}
+
+          <button style={{...(qAuto ? s.modeActive : s.modeInactive), flex:"none", fontSize:13, padding:"10px"}} onClick={() => setQAuto(v => !v)}>
+            {qAuto ? "🗣️ Αυτόματη εκφώνηση ερώτησης: ΝΑΙ" : "🗣️ Αυτόματη εκφώνηση ερώτησης: ΟΧΙ"}
+          </button>
+
+          {cur && <div style={{fontSize:12, color:"#888", textAlign:"center"}}>{`${remaining} ακόμα πριν ξαναρχίσουν οι ερωτήσεις`}</div>}
+        </div>
+      </div>
     );
   }
 
@@ -2193,6 +2269,11 @@ const s = {
   checksBox:{background:"#faf5ff",borderRadius:10,padding:10,marginTop:6},
   checkEditRow:{display:"flex",alignItems:"center",gap:6,padding:"5px 0"},
   smartLessonBtn:{background:"linear-gradient(135deg,#1565c0,#1976d2)",color:"white",border:"none",borderRadius:12,padding:"13px 14px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
+  qCard:{background:"white",borderRadius:16,padding:"22px 18px",minHeight:130,boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",justifyContent:"center",gap:8},
+  qCat:{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase"},
+  extraPill:{marginLeft:8,fontSize:10,fontWeight:700,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 6px",textTransform:"none",whiteSpace:"nowrap"},
+  qText:{fontSize:20,fontWeight:700,color:"#1a237e",lineHeight:1.35},
+  qAnswer:{background:"#e8f5e9",border:"1px solid #a5d6a7",color:"#1b5e20",borderRadius:12,padding:"14px 16px",fontSize:16,lineHeight:1.45,fontWeight:600},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
