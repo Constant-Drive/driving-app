@@ -723,6 +723,11 @@ export default function App() {
               <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Εξετάσεις</div>
               <label style={s.label}>Ημερομηνία εξέτασης</label>
               <input type="date" style={{...s.input, maxWidth:"100%"}} value={st.examDate || ""} onChange={e => updateStudentExam({ examDate: e.target.value })}/>
+              <BookedLessons student={st} onChange={list => updateStudentExam({ bookedLessons: list })}/>
+            </div>
+
+            <div style={s.formCard}>
+              <div style={{...s.sectionTitle, marginBottom:8}}>📨 Ενημέρωση γραμματείας</div>
               <label style={s.label}>Επιπλέον μαθήματα (πέρα από τα υποχρεωτικά)</label>
               <input type="number" min="0" style={s.input} value={st.extraLessons ?? ""} onChange={e => updateStudentExam({ extraLessons: e.target.value === "" ? "" : Number(e.target.value), extraLessonsSent: false })}/>
               {st.extraLessons > 0 && (
@@ -733,8 +738,6 @@ export default function App() {
                 )
               )}
             </div>
-
-            <BookedLessons student={st} onChange={list => updateStudentExam({ bookedLessons: list })}/>
 
             <div style={s.formCard}>
               <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Ολοκλήρωση Εκπαίδευσης</div>
@@ -1484,8 +1487,8 @@ function BookedLessons({ student, onChange }) {
   for (let d = 1; d <= daysInMonth; d++) cells.push(viewMonth + "-" + String(d).padStart(2, "0"));
 
   return (
-    <div style={s.formCard}>
-      <div style={{...s.sectionTitle, marginBottom:6}}>📋 Κλεισμένα μαθήματα (γραμματεία)</div>
+    <div style={{marginTop:14, paddingTop:12, borderTop:"1px solid #f0f0f0"}}>
+      <label style={{...s.label, marginTop:0}}>📋 Κλεισμένα μαθήματα (γραμματεία)</label>
       <div style={{fontSize:12, color:"#888", marginBottom:8}}>
         {upcomingDates.length === 0 ? "Δεν υπάρχουν μελλοντικά κλεισμένα μαθήματα" : `${upcomingDates.length} μελλοντικά μαθήματα`}
         {exam && upcomingDates.length > 0 ? ` • ${beforeExam} έως την εξέταση (${examShort})` : ""}
