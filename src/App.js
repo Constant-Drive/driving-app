@@ -582,6 +582,12 @@ export default function App() {
   if (view === "student" && selectedStudent) {
     const st = selectedStudent;
     const sorted = [...st.lessons].sort((a,b) => b.date.localeCompare(a.date));
+    const pendingAppts = schedule
+      .filter(e => String(e.studentId) === String(st.id) && !e.converted && !e.skipped
+        && (e.duration != null ? e.duration : 90) > 0 && e.date <= today())
+      .sort((a, b) => (b.date + (b.time || "")).localeCompare(a.date + (a.time || "")));
+    const pendingAppt = pendingAppts[0] || null;
+    const pendingApptCount = pendingAppts.length;
     const otherLessons = st.otherLessons || {};
     const otherTotal = OTHER_INSTRUCTORS.reduce((sum, name) => sum + (Number(otherLessons[name]) || 0), 0);
 
@@ -618,6 +624,7 @@ export default function App() {
               <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
               {showHeaderMenu && (
                 <div style={s.headerMenu}>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); startAddLesson(); }}>＋ Νέο Μάθημα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️ Μετάβαση κάτω</button>
@@ -627,6 +634,14 @@ export default function App() {
           </div>
         </div>
         <div style={s.container}>
+          {pendingAppt && (
+            <button style={s.smartLessonBtn} onClick={() => convertScheduleToLesson(pendingAppt, "student")}>
+              {pendingAppt.date === today()
+                ? `✓ Καταχώρηση σημερινού μαθήματος (${pendingAppt.time})`
+                : `✓ Καταχώρηση μαθήματος ${formatDate(pendingAppt.date)} (${pendingAppt.time})`}
+              {pendingApptCount > 1 && <span style={{fontSize:11, fontWeight:600, opacity:0.9}}>{`  +${pendingApptCount - 1} ακόμα μη καταχωρημένα`}</span>}
+            </button>
+          )}
           {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length + otherTotal}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
@@ -716,7 +731,6 @@ export default function App() {
             </div>
           ))}
           <div style={{display:"flex", flexDirection:"column", gap:12}}>
-            <button style={{...s.btnPrimary, marginTop:0}} onClick={startAddLesson}>+ Νέο Μάθημα</button>
             <ProgressCheck student={st} exercises={exercises} routes={routes} />
 
             <div style={s.formCard}>
@@ -2179,6 +2193,7 @@ const s = {
   simFailureRow:{fontSize:12,color:"#555",padding:"3px 2px"},
   checksBox:{background:"#faf5ff",borderRadius:10,padding:10,marginTop:6},
   checkEditRow:{display:"flex",alignItems:"center",gap:6,padding:"5px 0"},
+  smartLessonBtn:{background:"linear-gradient(135deg,#1565c0,#1976d2)",color:"white",border:"none",borderRadius:12,padding:"13px 14px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
