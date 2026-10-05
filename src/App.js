@@ -1,9 +1,43 @@
 import { useState, useEffect } from "react";
 import { db } from "./firebase";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteField } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import { QUESTIONS } from "./questions";
 
 const DATA_DOC = doc(db, "app", "data");
+const VISITS_DOC = doc(db, "app", "visits");
+const auth = getAuth();
+
+// Anonymous per-browser id, kept in localStorage (used only for the visit log)
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem("driveDeviceId");
+    if (!id) {
+      id = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem("driveDeviceId", id);
+    }
+    return id;
+  } catch (e) { return "d-nostorage"; }
+}
+
+function describeDevice() {
+  const ua = navigator.userAgent || "";
+  let os = "Άγνωστο";
+  if (/Android/i.test(ua)) os = "Android";
+  else if (/iPhone/i.test(ua)) os = "iPhone";
+  else if (/iPad/i.test(ua)) os = "iPad";
+  else if (/Windows/i.test(ua)) os = "Windows";
+  else if (/Mac OS X|Macintosh/i.test(ua)) os = "Mac";
+  else if (/Linux/i.test(ua)) os = "Linux";
+  let br = "Browser";
+  if (/SamsungBrowser/i.test(ua)) br = "Samsung Internet";
+  else if (/Edg\//i.test(ua)) br = "Edge";
+  else if (/OPR\/|Opera/i.test(ua)) br = "Opera";
+  else if (/Firefox|FxiOS/i.test(ua)) br = "Firefox";
+  else if (/CriOS|Chrome/i.test(ua)) br = "Chrome";
+  else if (/Safari/i.test(ua)) br = "Safari";
+  return os + " • " + br;
+}
 const QUESTION_CATS = [...new Set(QUESTIONS.map(q => q.c))];
 
 function shuffleArr(arr) {
@@ -25,6 +59,7 @@ const DEFAULT_ROUTES = [
 ].map(n => ({ name: n, reqNew: false, reqRetrain: false }));
 
 const OTHER_INSTRUCTORS = ["Ηλίας", "Αλέξης", "Γιώργος"];
+const OTHER_LESSON_MINUTES = 90; // διάρκεια που υπολογίζεται για κάθε μάθημα με άλλον δάσκαλο
 
 const DEFAULT_PHRASES = [
   "Έλεγξε τους καθρέφτες",
@@ -153,11 +188,21 @@ export default function App() {
   const [qShow, setQShow] = useState(false);
   const [qAuto, setQAuto] = useState(false);
   const [questionsReturn, setQuestionsReturn] = useState(null);
+  const [visits, setVisits] = useState(null);
+  const [visitsError, setVisitsError] = useState(false);
+  const [visitsReturn, setVisitsReturn] = useState(null);
+  const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
+  const [authError, setAuthError] = useState("");
+  const [accessDenied, setAccessDenied] = useState(false);
   const [newExercise, setNewExercise] = useState("");
   const [newRoute, setNewRoute] = useState("");
   const [managerPhone, setManagerPhone] = useState("");
 
+  useEffect(() => onAuthStateChanged(auth, u => setUser(u || null)), []);
+
   useEffect(() => {
+    if (!user) return;
+    setAccessDenied(false);
     async function load() {
       try {
         const snap = await getDoc(DATA_DOC);
@@ -170,11 +215,79 @@ export default function App() {
           if (data.phrases) setPhrases(normalizePhrases(data.phrases));
           if (data.managerPhone) setManagerPhone(data.managerPhone);
         }
-      } catch(e) { console.error(e); }
+      } catch(e) { console.error(e); if (e && e.code === "permission-denied") setAccessDenied(true); }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    async function logVisit() {
+      try {
+        const id = getDeviceId();
+        const snap = await getDoc(VISITS_DOC);
+        const devices = snap.exists() ? (snap.data().devices || {}) : {};
+        const prev = devices[id] || {};
+        const now = Date.now();
+        const entry = {
+          first: prev.first || now,
+          last: now,
+          count: (prev.count || 0) + 1,
+          ua: describeDevice(),
+          scr: window.screen.width + "×" + window.screen.height,
+          tz: (Intl.DateTimeFormat().resolvedOptions().timeZone) || "",
+          lang: navigator.language || "",
+          em: (user && user.email) || "",
+        };
+        await setDoc(VISITS_DOC, { devices: { [id]: entry } }, { merge: true });
+        setVisits({ ...devices, [id]: { ...prev, ...entry } });
+      } catch (e) { console.error(e); }
+    }
+    logVisit();
+  }, [user]);
+
+  async function signInGoogle() {
+    setAuthError("");
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (e) {
+      console.error(e);
+      const code_ = e && e.code;
+      setAuthError(
+        code_ === "auth/popup-closed-by-user" || code_ === "auth/cancelled-popup-request" ? "Η σύνδεση ακυρώθηκε." :
+        code_ === "auth/popup-blocked" ? "Ο browser μπλόκαρε το παράθυρο σύνδεσης. Επίτρεψε τα αναδυόμενα παράθυρα και ξαναδοκίμασε." :
+        code_ === "auth/unauthorized-domain" ? "Ο τομέας της εφαρμογής δεν είναι εγκεκριμένος στο Firebase (Authentication → Settings → Authorized domains)." :
+        code_ === "auth/operation-not-allowed" ? "Η σύνδεση με Google δεν έχει ενεργοποιηθεί στο Firebase (Authentication → Sign-in method)." :
+        "Αποτυχία σύνδεσης: " + (code_ || (e && e.message) || "άγνωστο σφάλμα")
+      );
+    }
+  }
+  async function doSignOut() {
+    try { await signOut(auth); } catch (e) { console.error(e); }
+    setStudents([]); setSchedule([]); setSelectedStudent(null);
+    setVisits(null); setLoading(true); setView("schedule");
+  }
+
+  async function loadVisits() {
+    try {
+      const snap = await getDoc(VISITS_DOC);
+      setVisits(snap.exists() ? (snap.data().devices || {}) : {});
+      setVisitsError(false);
+    } catch (e) { console.error(e); setVisitsError(true); }
+  }
+  async function setDeviceMine(id, mine) {
+    try {
+      await setDoc(VISITS_DOC, { devices: { [id]: { mine } } }, { merge: true });
+      setVisits(prev => ({ ...(prev || {}), [id]: { ...((prev || {})[id] || {}), mine } }));
+    } catch (e) { console.error(e); setVisitsError(true); }
+  }
+  async function deleteDevice(id) {
+    try {
+      await setDoc(VISITS_DOC, { devices: { [id]: deleteField() } }, { merge: true });
+      setVisits(prev => { const n = { ...(prev || {}) }; delete n[id]; return n; });
+    } catch (e) { console.error(e); setVisitsError(true); }
+  }
 
   async function persist(s, ex, rt, sch, phr, mgrPhone) {
     setSaving(true);
@@ -441,6 +554,38 @@ export default function App() {
 
   const StatusBadge = () => saving ? <div style={s.savingBadge}>💾 Αποθήκευση...</div> : null;
 
+  if (user === undefined) return (
+    <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
+      <div style={{textAlign:"center", color:"#888"}}>
+        <div style={{fontSize:40}}>🚗</div>
+        <div style={{marginTop:12, fontSize:15}}>Φόρτωση...</div>
+      </div>
+    </div>
+  );
+
+  if (!user) return (
+    <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
+      <div style={{textAlign:"center", maxWidth:300, width:"90%"}}>
+        <div style={{fontSize:56}}>🚗</div>
+        <div style={{fontSize:20, fontWeight:800, color:"#1a237e", marginTop:10}}>Οδηγώ & Μαθαίνω</div>
+        <div style={{fontSize:13, color:"#888", margin:"6px 0 20px"}}>Συνδέσου για να συνεχίσεις</div>
+        <button style={{...s.btnPrimary, width:"100%", marginTop:0, padding:"14px"}} onClick={signInGoogle}>🔐 Σύνδεση με Google</button>
+        {authError && <div style={{color:"#c62828", fontSize:13, fontWeight:600, marginTop:12, lineHeight:1.4}}>{authError}</div>}
+      </div>
+    </div>
+  );
+
+  if (accessDenied) return (
+    <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
+      <div style={{textAlign:"center", maxWidth:300, width:"90%"}}>
+        <div style={{fontSize:48}}>⛔</div>
+        <div style={{fontSize:18, fontWeight:800, color:"#c62828", marginTop:10}}>Δεν έχεις πρόσβαση</div>
+        <div style={{fontSize:13, color:"#666", margin:"8px 0 20px", lineHeight:1.5}}>Ο λογαριασμός {user.email} δεν έχει δικαίωμα να δει τα δεδομένα αυτής της εφαρμογής.</div>
+        <button style={{...s.btnPrimary, width:"100%", marginTop:0, padding:"14px"}} onClick={doSignOut}>Αποσύνδεση</button>
+      </div>
+    </div>
+  );
+
   if (loading) return (
     <div style={{...s.page, display:"flex", alignItems:"center", justifyContent:"center", minHeight:"100vh"}}>
       <div style={{textAlign:"center", color:"#888"}}>
@@ -483,6 +628,8 @@ export default function App() {
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setQuestionsReturn(view); setView("questions"); }}>❓ Ερωτήσεις εξέτασης</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setVisitsReturn(view); setView("visits"); loadVisits(); }}>🕵️ Επισκέψεις</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setConfirmDialog({ message: "Να γίνει αποσύνδεση;", confirmLabel: "Αποσύνδεση", cancelLabel: "Άκυρο", onConfirm: doSignOut }); }}>🚪 Αποσύνδεση</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("settings"); }}>⚙️ Ρυθμίσεις</button>
               </div>
             )}
@@ -608,6 +755,8 @@ export default function App() {
     const pendingApptCount = pendingAppts.length;
     const otherLessons = st.otherLessons || {};
     const otherTotal = OTHER_INSTRUCTORS.reduce((sum, name) => sum + (Number(otherLessons[name]) || 0), 0);
+    const otherMinutes = otherTotal * OTHER_LESSON_MINUTES;
+    const totalTeachingHours = Math.round((st.lessons.reduce((a, l) => a + l.duration, 0) + otherMinutes) / 45 * 10) / 10;
 
     function updateStudentExam(patch) {
       updateStudents(prev => prev.map(s => s.id === st.id ? { ...s, ...patch } : s));
@@ -664,11 +813,11 @@ export default function App() {
           {st.notes && <NotesToggle notes={st.notes} />}
           <div style={s.summaryRow}>
             <div style={s.summaryBox}><div style={s.summaryNum}>{st.lessons.length + otherTotal}</div><div style={s.summaryLbl}>Μαθήματα</div></div>
-            <div style={s.summaryBox}><div style={s.summaryNum}>{Math.round(st.lessons.reduce((a,l) => a+l.duration, 0) / 45 * 10) / 10}</div><div style={s.summaryLbl}>Διδακτικές ώρες</div></div>
+            <div style={s.summaryBox}><div style={s.summaryNum}>{totalTeachingHours}</div><div style={s.summaryLbl}>Διδακτικές ώρες</div></div>
           </div>
           {otherTotal > 0 && (
             <div style={{fontSize:11, color:"#888", marginTop:-6}}>
-              Εκ των οποίων {otherTotal} με άλλους δασκάλους ({OTHER_INSTRUCTORS.filter(n => otherLessons[n] > 0).map(n => `${n}: ${otherLessons[n]}`).join(", ")})
+              Εκ των οποίων {otherTotal} μαθήματα με άλλους δασκάλους ({OTHER_INSTRUCTORS.filter(n => otherLessons[n] > 0).map(n => `${n}: ${otherLessons[n]}`).join(", ")}) = {Math.round(otherMinutes / 45 * 10) / 10} διδακτικές ώρες ({OTHER_LESSON_MINUTES + "'"} το καθένα)
             </div>
           )}
           {(() => {
@@ -901,6 +1050,7 @@ export default function App() {
     const isToday = schedViewDate === today();
     const isPastDay = schedViewDate < today();
     const unregCount = getUnregistered(schedule).length;
+    const unknownVisits = visits ? Object.values(visits).filter(d => !d.mine).length : 0;
 
     const smsParsed = smsText.trim() ? parseSms(smsText) : null;
     const smsEffectiveDate = smsDate || (smsParsed && smsParsed.weekdayIdx !== null ? nextDateForWeekday(smsParsed.weekdayIdx) : today());
@@ -948,13 +1098,15 @@ export default function App() {
           <StatusBadge />
           <div style={{position:"relative", flexShrink:0}}>
             <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
-            {unregCount > 0 && !showHeaderMenu && <span style={s.redDot}/>}
+            {(unregCount > 0 || unknownVisits > 0) && !showHeaderMenu && <span style={s.redDot}/>}
             {showHeaderMenu && (
               <div style={s.headerMenu}>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("home"); }}>👥 Μαθητές</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("unregistered"); }}>⏳ Μη καταχωρημένα{unregCount > 0 ? ` (${unregCount})` : ""}</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setVisitsReturn(view); setView("visits"); loadVisits(); }}>🕵️ Επισκέψεις{unknownVisits > 0 ? ` (${unknownVisits} άγνωστες)` : ""}</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setConfirmDialog({ message: "Να γίνει αποσύνδεση;", confirmLabel: "Αποσύνδεση", cancelLabel: "Άκυρο", onConfirm: doSignOut }); }}>🚪 Αποσύνδεση</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("income"); }}>📊 Έσοδα</button>
               </div>
             )}
@@ -1248,6 +1400,61 @@ export default function App() {
         )}
       </div>
     </div>
+    );
+  }
+
+  if (view === "visits") {
+    const myId = getDeviceId();
+    const list = Object.entries(visits || {}).map(([id, d]) => ({ id, ...d })).sort((a, b) => (b.last || 0) - (a.last || 0));
+    const unknown = list.filter(d => !d.mine).length;
+    const fmt = (ms) => ms ? new Date(ms).toLocaleString("el-GR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+    return (
+      <div style={s.page}>
+        <div style={s.header}><div style={s.headerInner}>
+          <button style={s.back} onClick={() => setView(visitsReturn || "schedule")}>‹ Πίσω</button>
+          <div style={{flex:1}}><div style={s.appTitle}>🕵️ Επισκέψεις</div></div>
+          <button style={s.settingsBtn} onClick={loadVisits}>🔄</button>
+        </div></div>
+        <div style={s.container}>
+          <div style={{fontSize:12, color:"#888", lineHeight:1.5}}>
+            Κάθε συσκευή που ανοίγει την εφαρμογή καταγράφεται εδώ. Πάτησε «Είναι δική μου» στις δικές σου συσκευές. Ό,τι μένει «Άγνωστη» μπορεί να είναι κάποιος άλλος, ή η δική σου συσκευή σε ανώνυμη καρτέλα ή μετά από καθαρισμό δεδομένων του browser.
+          </div>
+          {visitsError && <div style={s.simFailureRow}>⚠ Δεν ήταν δυνατή η επικοινωνία με τη βάση. Έλεγξε τους κανόνες του Firestore (να επιτρέπουν το έγγραφο app/visits).</div>}
+          {visits === null && !visitsError && <div style={{fontSize:13, color:"#888"}}>Φόρτωση…</div>}
+          {visits !== null && (
+            <div style={{fontSize:14, fontWeight:700, color: unknown > 0 ? "#c62828" : "#2e7d32"}}>
+              {list.length} συσκευές • {unknown > 0 ? `${unknown} άγνωστες` : "όλες δικές σου"}
+            </div>
+          )}
+          {list.map(d => (
+            <div key={d.id} style={d.mine ? s.lessonCard : {...s.lessonCard, border:"1.5px solid #ef9a9a", background:"#fff8f8"}}>
+              <div style={{display:"flex", alignItems:"center", flexWrap:"wrap", gap:4}}>
+                <span style={{fontWeight:700, color:"#1a237e", fontSize:15}}>{d.ua || "Άγνωστη συσκευή"}</span>
+                {d.id === myId && <span style={s.examBadge}>📍 Αυτή η συσκευή</span>}
+                {d.mine ? <span style={s.completedBadge}>✅ Δική μου</span> : <span style={s.examBadgeSoon}>⚠ Άγνωστη</span>}
+              </div>
+              <div style={{fontSize:12, color:"#666", lineHeight:1.6}}>
+                Πρώτη φορά: {fmt(d.first)}<br/>
+                Τελευταία φορά: {fmt(d.last)}<br/>
+                Ανοίγματα: {d.count || 0}<br/>
+                {d.em && <>Λογαριασμός: {d.em}<br/></>}
+                <span style={{color:"#999"}}>{[d.scr, d.tz, d.lang].filter(Boolean).join(" • ")}</span>
+              </div>
+              <div style={{display:"flex", gap:8, flexWrap:"wrap"}}>
+                {d.mine
+                  ? <button style={s.skipBtn} onClick={() => setDeviceMine(d.id, false)}>Δεν είναι δική μου</button>
+                  : <button style={{...s.convertBtn, marginTop:0, width:"auto"}} onClick={() => setDeviceMine(d.id, true)}>✓ Είναι δική μου</button>}
+                <button style={s.skipBtn} onClick={() => setConfirmDialog({
+                  message: "Να διαγραφεί αυτή η συσκευή από το ιστορικό;",
+                  confirmLabel: "Διαγραφή",
+                  cancelLabel: "Άκυρο",
+                  onConfirm: () => deleteDevice(d.id)
+                })}>🗑️ Διαγραφή</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 
