@@ -198,6 +198,31 @@ export default function App() {
   const [newRoute, setNewRoute] = useState("");
   const [managerPhone, setManagerPhone] = useState("");
 
+  // Keep the screen on while the app is open (Screen Wake Lock API)
+  useEffect(() => {
+    let lock = null;
+    let acquiring = false;
+    async function acquire() {
+      if (lock || acquiring) return;
+      if (!("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+      acquiring = true;
+      try {
+        lock = await navigator.wakeLock.request("screen");
+        lock.addEventListener("release", () => { lock = null; });
+      } catch (e) { /* not allowed right now (e.g. battery saver) */ }
+      acquiring = false;
+    }
+    function onVisible() { if (document.visibilityState === "visible") acquire(); }
+    acquire();
+    document.addEventListener("visibilitychange", onVisible);
+    document.addEventListener("pointerdown", acquire);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("pointerdown", acquire);
+      if (lock) lock.release().catch(() => {});
+    };
+  }, []);
+
   useEffect(() => onAuthStateChanged(auth, u => setUser(u || null)), []);
 
   useEffect(() => {
@@ -628,9 +653,9 @@ export default function App() {
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setQuestionsReturn(view); setView("questions"); }}>❓ Ερωτήσεις εξέτασης</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("settings"); }}>⚙️ Ρυθμίσεις</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setVisitsReturn(view); setView("visits"); loadVisits(); }}>🕵️ Επισκέψεις</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setConfirmDialog({ message: "Να γίνει αποσύνδεση;", confirmLabel: "Αποσύνδεση", cancelLabel: "Άκυρο", onConfirm: doSignOut }); }}>🚪 Αποσύνδεση</button>
-                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("settings"); }}>⚙️ Ρυθμίσεις</button>
               </div>
             )}
           </div>
@@ -1105,9 +1130,9 @@ export default function App() {
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setSchedDate(schedViewDate); setEditSchedId(null); setShowSchedForm(true); setShowSmsImport(false); }}>＋ Νέο Ραντεβού</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setShowSmsImport(true); setShowSchedForm(false); }}>📩 Εισαγωγή από SMS</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("unregistered"); }}>⏳ Μη καταχωρημένα{unregCount > 0 ? ` (${unregCount})` : ""}</button>
+                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("income"); }}>📊 Έσοδα</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setVisitsReturn(view); setView("visits"); loadVisits(); }}>🕵️ Επισκέψεις{unknownVisits > 0 ? ` (${unknownVisits} άγνωστες)` : ""}</button>
                 <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setConfirmDialog({ message: "Να γίνει αποσύνδεση;", confirmLabel: "Αποσύνδεση", cancelLabel: "Άκυρο", onConfirm: doSignOut }); }}>🚪 Αποσύνδεση</button>
-                <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("income"); }}>📊 Έσοδα</button>
               </div>
             )}
           </div>
