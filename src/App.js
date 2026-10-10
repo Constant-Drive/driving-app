@@ -1074,6 +1074,10 @@ export default function App() {
       .sort((a,b) => (a.time||"").localeCompare(b.time||""));
     const isToday = schedViewDate === today();
     const isPastDay = schedViewDate < today();
+    const dayCollected = dayEntries.reduce((sum, e) => sum + (e.paid ? sumMoney(e.notes) : 0), 0);
+    const dayFeeTotal = dayEntries.reduce((sum, e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0);
+    const dayHasMoney = dayEntries.some(e => hasMoney(e.notes));
+    const dayDiff = Math.round((dayCollected - dayFeeTotal) * 100) / 100;
     const unregCount = getUnregistered(schedule).length;
     const unknownVisits = visits ? Object.values(visits).filter(d => !d.mine).length : 0;
 
@@ -1150,6 +1154,11 @@ export default function App() {
                 {dayEntries.length > 0 && <span style={s.hoursBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + (e.duration != null ? e.duration : 90), 0) / 45)} δ.ω.</span>}
                 {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0))}€</span>}
               </div>
+              {dayHasMoney && (
+                <span style={dayDiff > 0 ? s.diffBadgeUp : dayDiff < 0 ? s.diffBadgeDown : s.diffBadgeZero}>
+                  {dayDiff > 0 ? `⚖️ +${formatEuro(dayDiff)} προς σχολή` : dayDiff < 0 ? `⚖️ ${formatEuro(dayDiff)} σου οφείλονται` : "⚖️ 0€ ισοσκελισμένο"}
+                </span>
+              )}
             </div>
             <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>›</button>
           </div>
@@ -2529,6 +2538,9 @@ const s = {
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,width:38,height:38,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0},
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  diffBadgeUp:{background:"#fff3e0",color:"#e65100",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
+  diffBadgeDown:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
+  diffBadgeZero:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
   feeBadge:{background:"#e8f5e9",color:"#2e7d32",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   hoursBadge:{background:"#fff3e0",color:"#e65100",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
   incomeTotalCard:{background:"linear-gradient(135deg,#2e7d32,#43a047)",borderRadius:14,padding:"18px 16px",color:"white",textAlign:"center",boxShadow:"0 2px 8px rgba(46,125,50,0.3)"},
