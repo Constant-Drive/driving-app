@@ -40,6 +40,8 @@ function describeDevice() {
 }
 const QUESTION_CATS = [...new Set(QUESTIONS.map(q => q.c))];
 
+const foldGreek = (t) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 function shuffleArr(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -182,7 +184,9 @@ export default function App() {
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [convertReturnView, setConvertReturnView] = useState(null);
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
-  const [qCat, setQCat] = useState("");
+  const [qCats, setQCats] = useState([]);
+  const [qSearch, setQSearch] = useState("");
+  const [qShowCats, setQShowCats] = useState(false);
   const [qDeck, setQDeck] = useState([]);
   const [qCurrent, setQCurrent] = useState(null);
   const [qShow, setQShow] = useState(false);
@@ -1493,9 +1497,14 @@ export default function App() {
   }
 
   if (view === "questions") {
-    const pool = QUESTIONS.map((q, i) => i).filter(i => !qCat || QUESTIONS[i].c === qCat);
+    const pool = QUESTIONS.map((q, i) => i).filter(i => qCats.length === 0 || qCats.includes(QUESTIONS[i].c));
     const remaining = qDeck.filter(i => pool.includes(i)).length;
     const cur = qCurrent !== null ? QUESTIONS[qCurrent] : null;
+    const terms = foldGreek(qSearch).split(" ").filter(Boolean);
+    const results = terms.length === 0 ? [] : QUESTIONS.map((q, i) => i).filter(i => {
+      const hay = foldGreek(QUESTIONS[i].q + " " + QUESTIONS[i].a);
+      return terms.every(t => hay.includes(t));
+    });
     function nextQuestion() {
       let deck = qDeck.filter(i => pool.includes(i));
       if (deck.length === 0) {
@@ -1506,6 +1515,10 @@ export default function App() {
       setQCurrent(next); setQDeck(rest); setQShow(false);
       if (qAuto) speak(QUESTIONS[next].q);
     }
+    function toggleCat(c) {
+      setQCats(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+      setQDeck([]);
+    }
     return (
       <div style={s.page}>
         <div style={s.header}><div style={s.headerInner}>
@@ -1513,10 +1526,37 @@ export default function App() {
           <div style={{flex:1}}><div style={s.appTitle}>❓ Ερωτήσεις εξέτασης</div></div>
         </div></div>
         <div style={s.container}>
-          <select style={s.input} value={qCat} onChange={e => { setQCat(e.target.value); setQDeck([]); setQCurrent(null); setQShow(false); }}>
-            <option value="">{`Όλες οι κατηγορίες (${QUESTIONS.length})`}</option>
-            {QUESTION_CATS.map(c => <option key={c} value={c}>{`${c} (${QUESTIONS.filter(q => q.c === c).length})`}</option>)}
-          </select>
+          <input style={s.input} placeholder="🔍 Αναζήτηση σε όλες τις ερωτήσεις..." value={qSearch} onChange={e => setQSearch(e.target.value)}/>
+
+          {terms.length > 0 && (
+            <div style={s.qResults}>
+              <div style={{fontSize:11, color:"#888", padding:"6px 12px"}}>{results.length === 0 ? "Δεν βρέθηκαν αποτελέσματα" : `${results.length} αποτελέσματα`}</div>
+              {results.slice(0, 30).map(i => (
+                <div key={i} style={s.qResultRow} onClick={() => { setQCurrent(i); setQShow(true); setQSearch(""); }}>
+                  <div style={{fontSize:11, color:"#888"}}>{QUESTIONS[i].c}{QUESTIONS[i].x ? " • ➕ Εκτός PDF" : ""}</div>
+                  <div style={{fontSize:14, color:"#1a237e", fontWeight:600}}>{QUESTIONS[i].q}</div>
+                </div>
+              ))}
+              {results.length > 30 && <div style={{fontSize:11, color:"#888", padding:"8px 12px"}}>Εμφανίζονται τα πρώτα 30 — στένεψε την αναζήτηση.</div>}
+            </div>
+          )}
+
+          <button style={{...s.manageBtn, textAlign:"left", display:"flex", justifyContent:"space-between", padding:"10px 14px"}} onClick={() => setQShowCats(v => !v)}>
+            <span>{`🗂️ Κατηγορίες: ${qCats.length === 0 ? "Όλες" : qCats.length + " επιλεγμένες"}`}</span>
+            <span>{qShowCats ? "▴" : "▾"}</span>
+          </button>
+          {qShowCats && (
+            <div>
+              <div style={s.checkGrid}>
+                {QUESTION_CATS.map(c => (
+                  <button key={c} style={qCats.includes(c) ? s.checkActive : s.checkInactive} onClick={() => toggleCat(c)}>
+                    {`${c} (${QUESTIONS.filter(q => q.c === c).length})`}
+                  </button>
+                ))}
+              </div>
+              {qCats.length > 0 && <button style={{...s.skipBtn, marginTop:8}} onClick={() => { setQCats([]); setQDeck([]); }}>Καθαρισμός επιλογής (όλες)</button>}
+            </div>
+          )}
 
           <div style={s.qCard}>
             {cur ? (
@@ -1525,12 +1565,12 @@ export default function App() {
                 <div style={s.qText}>{cur.q}</div>
               </>
             ) : (
-              <div style={{color:"#999", textAlign:"center"}}>Πάτησε «Τυχαία ερώτηση» για να ξεκινήσεις</div>
+              <div style={{color:"#999", textAlign:"center", fontSize:14}}>Πάτησε «Τυχαία ερώτηση» ή ψάξε παραπάνω</div>
             )}
           </div>
           {cur && qShow && <div style={s.qAnswer}>{cur.a}</div>}
 
-          <button style={{...s.btnPrimary, marginTop:0, padding:"16px", fontSize:17}} onClick={nextQuestion}>🎲 Τυχαία ερώτηση</button>
+          <button style={{...s.btnPrimary, marginTop:0, padding:"14px", fontSize:16}} onClick={nextQuestion}>🎲 Τυχαία ερώτηση</button>
 
           {cur && (
             <div style={{display:"flex", gap:10}}>
@@ -1543,7 +1583,7 @@ export default function App() {
             {qAuto ? "🗣️ Αυτόματη εκφώνηση ερώτησης: ΝΑΙ" : "🗣️ Αυτόματη εκφώνηση ερώτησης: ΟΧΙ"}
           </button>
 
-          {cur && <div style={{fontSize:12, color:"#888", textAlign:"center"}}>{`${remaining} ακόμα πριν ξαναρχίσουν οι ερωτήσεις`}</div>}
+          {cur && <div style={{fontSize:12, color:"#888", textAlign:"center"}}>{`${remaining} ακόμα πριν ξαναρχίσουν οι ερωτήσεις (${pool.length} στο σύνολο)`}</div>}
         </div>
       </div>
     );
@@ -2510,11 +2550,13 @@ const s = {
   checksBox:{background:"#faf5ff",borderRadius:10,padding:10,marginTop:6},
   checkEditRow:{display:"flex",alignItems:"center",gap:6,padding:"5px 0"},
   smartLessonBtn:{background:"linear-gradient(135deg,#1565c0,#1976d2)",color:"white",border:"none",borderRadius:12,padding:"13px 14px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%",boxShadow:"0 2px 8px rgba(21,101,192,0.3)"},
-  qCard:{background:"white",borderRadius:16,padding:"22px 18px",minHeight:130,boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",justifyContent:"center",gap:8},
+  qCard:{background:"white",borderRadius:12,padding:"10px 14px",minHeight:60,boxShadow:"0 1px 4px rgba(0,0,0,0.08)",display:"flex",flexDirection:"column",justifyContent:"center",gap:3},
   qCat:{fontSize:11,fontWeight:700,color:"#888",textTransform:"uppercase"},
   extraPill:{marginLeft:8,fontSize:10,fontWeight:700,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 6px",textTransform:"none",whiteSpace:"nowrap"},
-  qText:{fontSize:20,fontWeight:700,color:"#1a237e",lineHeight:1.35},
-  qAnswer:{background:"#e8f5e9",border:"1px solid #a5d6a7",color:"#1b5e20",borderRadius:12,padding:"14px 16px",fontSize:16,lineHeight:1.45,fontWeight:600},
+  qText:{fontSize:17,fontWeight:700,color:"#1a237e",lineHeight:1.3},
+  qAnswer:{background:"#e8f5e9",border:"1px solid #a5d6a7",color:"#1b5e20",borderRadius:10,padding:"10px 12px",fontSize:15,lineHeight:1.4,fontWeight:600},
+  qResults:{background:"white",border:"1.5px solid #e0e0e0",borderRadius:10,maxHeight:260,overflowY:"auto"},
+  qResultRow:{padding:"9px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer"},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
