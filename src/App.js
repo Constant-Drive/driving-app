@@ -1505,6 +1505,21 @@ export default function App() {
       const hay = foldGreek(QUESTIONS[i].q + " " + QUESTIONS[i].a);
       return terms.every(t => hay.includes(t));
     });
+    const cardBlock = (
+      <>
+        <div style={s.qCard}>
+          {cur ? (
+            <>
+              <div style={s.qCat}>{cur.c}{cur.x && <span style={s.extraPill}>➕ Εκτός PDF</span>}</div>
+              <div style={s.qText}>{cur.q}</div>
+            </>
+          ) : (
+            <div style={{color:"#999", textAlign:"center", fontSize:14}}>Πάτησε «Τυχαία ερώτηση» ή ψάξε παραπάνω</div>
+          )}
+        </div>
+        {cur && qShow && <div style={s.qAnswer}>{cur.a}</div>}
+      </>
+    );
     function nextQuestion() {
       let deck = qDeck.filter(i => pool.includes(i));
       if (deck.length === 0) {
@@ -1526,13 +1541,18 @@ export default function App() {
           <div style={{flex:1}}><div style={s.appTitle}>❓ Ερωτήσεις εξέτασης</div></div>
         </div></div>
         <div style={s.container}>
-          <input style={s.input} placeholder="🔍 Αναζήτηση σε όλες τις ερωτήσεις..." value={qSearch} onChange={e => setQSearch(e.target.value)}/>
+          <div style={{position:"relative"}}>
+            <input style={{...s.input, paddingRight:42}} placeholder="🔍 Αναζήτηση σε όλες τις ερωτήσεις..." value={qSearch} onChange={e => setQSearch(e.target.value)}/>
+            {qSearch && <button style={s.qClearBtn} onClick={() => setQSearch("")} aria-label="Καθαρισμός αναζήτησης">✕</button>}
+          </div>
+
+          {terms.length > 0 && cur && cardBlock}
 
           {terms.length > 0 && (
             <div style={s.qResults}>
               <div style={{fontSize:11, color:"#888", padding:"6px 12px"}}>{results.length === 0 ? "Δεν βρέθηκαν αποτελέσματα" : `${results.length} αποτελέσματα`}</div>
               {results.slice(0, 30).map(i => (
-                <div key={i} style={s.qResultRow} onClick={() => { setQCurrent(i); setQShow(true); setQSearch(""); }}>
+                <div key={i} style={i === qCurrent ? s.qResultRowActive : s.qResultRow} onClick={() => { setQCurrent(i); setQShow(true); if (document.activeElement) document.activeElement.blur(); }}>
                   <div style={{fontSize:11, color:"#888"}}>{QUESTIONS[i].c}{QUESTIONS[i].x ? " • ➕ Εκτός PDF" : ""}</div>
                   <div style={{fontSize:14, color:"#1a237e", fontWeight:600}}>{QUESTIONS[i].q}</div>
                 </div>
@@ -1558,17 +1578,7 @@ export default function App() {
             </div>
           )}
 
-          <div style={s.qCard}>
-            {cur ? (
-              <>
-                <div style={s.qCat}>{cur.c}{cur.x && <span style={s.extraPill}>➕ Εκτός PDF</span>}</div>
-                <div style={s.qText}>{cur.q}</div>
-              </>
-            ) : (
-              <div style={{color:"#999", textAlign:"center", fontSize:14}}>Πάτησε «Τυχαία ερώτηση» ή ψάξε παραπάνω</div>
-            )}
-          </div>
-          {cur && qShow && <div style={s.qAnswer}>{cur.a}</div>}
+          {!(terms.length > 0 && cur) && cardBlock}
 
           <button style={{...s.btnPrimary, marginTop:0, padding:"14px", fontSize:16}} onClick={nextQuestion}>🎲 Τυχαία ερώτηση</button>
 
@@ -2556,6 +2566,8 @@ const s = {
   qText:{fontSize:17,fontWeight:700,color:"#1a237e",lineHeight:1.3},
   qAnswer:{background:"#e8f5e9",border:"1px solid #a5d6a7",color:"#1b5e20",borderRadius:10,padding:"10px 12px",fontSize:15,lineHeight:1.4,fontWeight:600},
   qResults:{background:"white",border:"1.5px solid #e0e0e0",borderRadius:10,maxHeight:260,overflowY:"auto"},
+  qClearBtn:{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",background:"#e0e0e0",color:"#555",border:"none",borderRadius:"50%",width:26,height:26,fontSize:13,fontWeight:700,cursor:"pointer",padding:0,lineHeight:"26px"},
+  qResultRowActive:{padding:"9px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer",background:"#e8eaf6"},
   qResultRow:{padding:"9px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer"},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
