@@ -185,6 +185,7 @@ export default function App() {
   const [convertReturnView, setConvertReturnView] = useState(null);
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
   const [showOtherCard, setShowOtherCard] = useState(false);
+  const [showExamCard, setShowExamCard] = useState(false);
   const [openLessonTags, setOpenLessonTags] = useState({});
   const [qCats, setQCats] = useState([]);
   const [qSearch, setQSearch] = useState("");
@@ -954,10 +955,27 @@ export default function App() {
           ))}
           <div style={{display:"flex", flexDirection:"column", gap:12}}>
             <div style={s.formCard}>
-              <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Εξετάσεις</div>
-              <label style={s.label}>Ημερομηνία εξέτασης</label>
-              <input type="date" style={{...s.input, maxWidth:"100%"}} value={st.examDate || ""} onChange={e => updateStudentExam({ examDate: e.target.value })}/>
-              <BookedLessons student={st} onChange={list => updateStudentExam({ bookedLessons: list })}/>
+              <button style={s.cardToggle} onClick={() => setShowExamCard(v => !v)}>
+                <span style={{flex:1, textAlign:"left"}}>
+                  🎓 Εξετάσεις
+                  {(() => {
+                    const bookedCount = (st.bookedLessons || []).filter(b => b.date >= today()).length;
+                    if (!st.examDate && bookedCount === 0) return <span style={{display:"block", fontSize:12, fontWeight:600, color:"#999", marginTop:2}}>Δεν έχει οριστεί ημερομηνία</span>;
+                    return (
+                      <span style={{display:"flex", alignItems:"center", flexWrap:"wrap", gap:4, fontSize:12, fontWeight:600, color:"#666", marginTop:4}}>
+                        {st.examDate && <ExamBadge date={st.examDate}/>}
+                        {bookedCount > 0 && <span>{`📋 ${bookedCount} κλεισμένα μαθήματα`}</span>}
+                      </span>
+                    );
+                  })()}
+                </span>
+                <span>{showExamCard ? "▴" : "▾"}</span>
+              </button>
+              {showExamCard && <>
+                <label style={s.label}>Ημερομηνία εξέτασης</label>
+                <input type="date" style={{...s.input, maxWidth:"100%"}} value={st.examDate || ""} onChange={e => updateStudentExam({ examDate: e.target.value })}/>
+                <BookedLessons student={st} onChange={list => updateStudentExam({ bookedLessons: list })}/>
+              </>}
             </div>
 
             <div style={s.formCard}>
