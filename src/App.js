@@ -184,6 +184,8 @@ export default function App() {
   const [convertingSchedId, setConvertingSchedId] = useState(null);
   const [convertReturnView, setConvertReturnView] = useState(null);
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
+  const [showOtherCard, setShowOtherCard] = useState(false);
+  const [openLessonTags, setOpenLessonTags] = useState({});
   const [qCats, setQCats] = useState([]);
   const [qSearch, setQSearch] = useState("");
   const [qShowCats, setQShowCats] = useState(false);
@@ -872,8 +874,19 @@ export default function App() {
           })()}
           <ProgressCheck student={st} exercises={exercises} routes={routes} />
           <div style={s.formCard}>
-            <div style={{...s.sectionTitle, marginBottom:8}}>🧑‍🏫 Μαθήματα με άλλους δασκάλους</div>
-            <div style={{display:"flex", gap:8}}>
+            <button style={s.cardToggle} onClick={() => setShowOtherCard(v => !v)}>
+              <span style={{flex:1, textAlign:"left"}}>
+                🧑‍🏫 Μαθήματα με άλλους δασκάλους
+                {(otherTotal > 0 || (st.otherRoutes || []).length > 0) && (
+                  <span style={{display:"block", fontSize:12, fontWeight:600, color:"#666", marginTop:2}}>
+                    {[otherTotal > 0 ? `${otherTotal} μαθήματα` : null, (st.otherRoutes || []).length > 0 ? `${(st.otherRoutes || []).length} διαδρομές` : null].filter(Boolean).join(" • ")}
+                  </span>
+                )}
+              </span>
+              <span>{showOtherCard ? "▴" : "▾"}</span>
+            </button>
+            {showOtherCard && <>
+            <div style={{display:"flex", gap:8, marginTop:10}}>
               {OTHER_INSTRUCTORS.map(name => (
                 <div key={name} style={{flex:1}}>
                   <label style={{...s.label, textAlign:"center", display:"block"}}>{name}</label>
@@ -903,6 +916,7 @@ export default function App() {
                 </div>
               </div>
             )}
+            </>}
           </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map((l, idx) => (
@@ -910,10 +924,20 @@ export default function App() {
               <div style={s.lessonTop}><div>
                 <div style={s.lessonDate}>{formatDate(l.date)}</div>
                 <div style={s.lessonNum}>Αρ. Μαθήματος: {sorted.length - idx}</div>
+                {l.routes.length > 0 && <div style={{display:"flex", flexWrap:"wrap", gap:4, margin:"4px 0 2px"}}>
+                  {l.routes.map(r => <span key={r} style={s.routeTitleTag}>🗺️ {r}</span>)}
+                </div>}
                 <div style={s.lessonDur}>{l.duration} λεπτά</div>
               </div></div>
-              {l.routes.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Διαδρομές:</div><div style={s.tags}>{l.routes.map(r => <span key={r} style={{...s.tag, background:"#e8f5e9", color:"#2e7d32"}}>{r}</span>)}</div></div>}
-              {l.exercises.length > 0 && <div style={s.tagSection}><div style={s.tagLabel}>Δοκιμασίες:</div><div style={s.tags}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div></div>}
+              {l.exercises.length > 0 && (
+                <div>
+                  <button style={s.lessonTagsToggle} onClick={() => setOpenLessonTags(p => ({ ...p, [l.id]: !p[l.id] }))}>
+                    <span>{`🧩 ${l.exercises.length} ${l.exercises.length === 1 ? "δοκιμασία" : "δοκιμασίες"}`}</span>
+                    <span>{openLessonTags[l.id] ? "▴" : "▾"}</span>
+                  </button>
+                  {openLessonTags[l.id] && <div style={{...s.tags, marginTop:8}}>{l.exercises.map(e => <span key={e} style={s.tag}>{e}</span>)}</div>}
+                </div>
+              )}
               {l.simulation && <div>
                 <div style={{fontSize:11,fontWeight:600,color:"#888",textTransform:"uppercase",marginBottom:3}}>ΠΡΟΣΟΜΟΙΩΣΗ ΕΞΕΤΑΣΗΣ:</div>
                 <SimSummary sum={l.simulation.summary}/>
@@ -2569,6 +2593,9 @@ const s = {
   qClearBtn:{position:"absolute",right:7,top:"50%",transform:"translateY(-50%)",background:"#e0e0e0",color:"#555",border:"none",borderRadius:"50%",width:26,height:26,fontSize:13,fontWeight:700,cursor:"pointer",padding:0,lineHeight:"26px"},
   qResultRowActive:{padding:"9px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer",background:"#e8eaf6"},
   qResultRow:{padding:"9px 12px",borderTop:"1px solid #f0f0f0",cursor:"pointer"},
+  cardToggle:{background:"none",border:"none",padding:0,width:"100%",display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:15,fontWeight:800,color:"#1a237e",fontFamily:"inherit"},
+  routeTitleTag:{background:"#e8f5e9",color:"#2e7d32",fontSize:13,fontWeight:700,borderRadius:8,padding:"3px 9px"},
+  lessonTagsToggle:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,padding:"9px 12px",fontSize:13,fontWeight:700,width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left",fontFamily:"inherit"},
   bookedRow:{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderTop:"1px solid #f0f0f0",flexWrap:"wrap"},
   examBadge:{fontSize:11,fontWeight:600,color:"#4527a0",background:"#ede7f6",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
   examBadgeSoon:{fontSize:11,fontWeight:700,color:"#c62828",background:"#ffebee",borderRadius:6,padding:"1px 7px",marginLeft:4,whiteSpace:"nowrap",display:"inline-block"},
