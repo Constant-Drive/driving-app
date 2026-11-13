@@ -186,6 +186,7 @@ export default function App() {
   const [showOtherRoutes, setShowOtherRoutes] = useState(false);
   const [showOtherCard, setShowOtherCard] = useState(false);
   const [showExamCard, setShowExamCard] = useState(false);
+  const [showSecretaryCard, setShowSecretaryCard] = useState(false);
   const [openLessonTags, setOpenLessonTags] = useState({});
   const [qCats, setQCats] = useState([]);
   const [qSearch, setQSearch] = useState("");
@@ -979,7 +980,20 @@ export default function App() {
             </div>
 
             <div style={s.formCard}>
-              <div style={{...s.sectionTitle, marginBottom:8}}>📨 Ενημέρωση γραμματείας</div>
+              <button style={s.cardToggle} onClick={() => setShowSecretaryCard(v => !v)}>
+                <span style={{flex:1, textAlign:"left"}}>
+                  📨 Ενημέρωση γραμματείας
+                  {st.extraLessons > 0 ? (
+                    <span style={{display:"block", fontSize:12, fontWeight:600, marginTop:2, color: st.extraLessonsSent ? "#2e7d32" : "#e65100"}}>
+                      {st.extraLessonsSent ? `✓ Απεστάλη (${st.extraLessons} επιπλέον μαθήματα)` : `⏳ ${st.extraLessons} επιπλέον μαθήματα — δεν έχει σταλεί`}
+                    </span>
+                  ) : (
+                    <span style={{display:"block", fontSize:12, fontWeight:600, color:"#999", marginTop:2}}>Δεν έχουν οριστεί επιπλέον μαθήματα</span>
+                  )}
+                </span>
+                <span>{showSecretaryCard ? "▴" : "▾"}</span>
+              </button>
+              {showSecretaryCard && <>
               <label style={s.label}>Επιπλέον μαθήματα (πέρα από τα υποχρεωτικά)</label>
               <input type="number" min="0" style={s.input} value={st.extraLessons ?? ""} onChange={e => updateStudentExam({ extraLessons: e.target.value === "" ? "" : Number(e.target.value), extraLessonsSent: false })}/>
               {st.extraLessons > 0 && (
@@ -989,6 +1003,7 @@ export default function App() {
                   <button style={s.viberBtn} onClick={sendExtraLessonsViber}>📱 Αποστολή SMS</button>
                 )
               )}
+              </>}
             </div>
 
             <div style={s.formCard}>
