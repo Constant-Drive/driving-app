@@ -187,7 +187,6 @@ export default function App() {
   const [showOtherCard, setShowOtherCard] = useState(false);
   const [showExamCard, setShowExamCard] = useState(false);
   const [showSecretaryCard, setShowSecretaryCard] = useState(false);
-  const [showCompleteCard, setShowCompleteCard] = useState(false);
   const [openLessonTags, setOpenLessonTags] = useState({});
   const [qCats, setQCats] = useState([]);
   const [qSearch, setQSearch] = useState("");
@@ -876,6 +875,51 @@ export default function App() {
             );
           })()}
           <ProgressCheck student={st} exercises={exercises} routes={routes} />
+          <div style={s.formCard}>
+            <button style={s.cardToggle} onClick={() => setShowOtherCard(v => !v)}>
+              <span style={{flex:1, textAlign:"left"}}>
+                🧑‍🏫 Μαθήματα με άλλους δασκάλους
+                {(otherTotal > 0 || (st.otherRoutes || []).length > 0) && (
+                  <span style={{display:"block", fontSize:12, fontWeight:600, color:"#666", marginTop:2}}>
+                    {[otherTotal > 0 ? `${otherTotal} μαθήματα` : null, (st.otherRoutes || []).length > 0 ? `${(st.otherRoutes || []).length} διαδρομές` : null].filter(Boolean).join(" • ")}
+                  </span>
+                )}
+              </span>
+              <span>{showOtherCard ? "▴" : "▾"}</span>
+            </button>
+            {showOtherCard && <>
+            <div style={{display:"flex", gap:8, marginTop:10}}>
+              {OTHER_INSTRUCTORS.map(name => (
+                <div key={name} style={{flex:1}}>
+                  <label style={{...s.label, textAlign:"center", display:"block"}}>{name}</label>
+                  <input type="number" min="0" style={{...s.input, textAlign:"center"}}
+                    value={otherLessons[name] ?? ""}
+                    onChange={e => updateStudentExam({ otherLessons: { ...otherLessons, [name]: e.target.value === "" ? "" : Number(e.target.value) } })}/>
+                </div>
+              ))}
+            </div>
+            <button style={{...s.manageBtn, marginTop:10, textAlign:"left", display:"flex", justifyContent:"space-between"}} onClick={() => setShowOtherRoutes(v => !v)}>
+              <span>🗺️ Διαδρομές με άλλους δασκάλους{(st.otherRoutes || []).length > 0 ? ` (${(st.otherRoutes || []).length})` : ""}</span>
+              <span>{showOtherRoutes ? "▴" : "▾"}</span>
+            </button>
+            {showOtherRoutes && (
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:11, color:"#888", marginBottom:6}}>Μετράνε ως ολοκληρωμένες στον έλεγχο υποχρεωτικών</div>
+                <div style={s.checkGrid}>
+                  {routes.map(r => {
+                    const on = (st.otherRoutes || []).includes(r.name);
+                    return (
+                      <button key={r.name}
+                        style={on ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive}
+                        onClick={() => updateStudentExam({ otherRoutes: on ? (st.otherRoutes || []).filter(n => n !== r.name) : [...(st.otherRoutes || []), r.name] })}
+                      >{r.name}</button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            </>}
+          </div>
           {sorted.length === 0 && <div style={s.empty}><div style={{fontSize:36}}>📋</div><div style={s.emptyText}>Δεν υπάρχουν μαθήματα ακόμα</div></div>}
           {sorted.map((l, idx) => (
             <div key={l.id} style={s.lessonCard}>
@@ -936,52 +980,6 @@ export default function App() {
             </div>
 
             <div style={s.formCard}>
-              <button style={s.cardToggle} onClick={() => setShowOtherCard(v => !v)}>
-                <span style={{flex:1, textAlign:"left"}}>
-                  🧑‍🏫 Μαθήματα με άλλους δασκάλους
-                  {(otherTotal > 0 || (st.otherRoutes || []).length > 0) && (
-                    <span style={{display:"block", fontSize:12, fontWeight:600, color:"#666", marginTop:2}}>
-                      {[otherTotal > 0 ? `${otherTotal} μαθήματα` : null, (st.otherRoutes || []).length > 0 ? `${(st.otherRoutes || []).length} διαδρομές` : null].filter(Boolean).join(" • ")}
-                    </span>
-                  )}
-                </span>
-                <span>{showOtherCard ? "▴" : "▾"}</span>
-              </button>
-              {showOtherCard && <>
-              <div style={{display:"flex", gap:8, marginTop:10}}>
-                {OTHER_INSTRUCTORS.map(name => (
-                  <div key={name} style={{flex:1}}>
-                    <label style={{...s.label, textAlign:"center", display:"block"}}>{name}</label>
-                    <input type="number" min="0" style={{...s.input, textAlign:"center"}}
-                      value={otherLessons[name] ?? ""}
-                      onChange={e => updateStudentExam({ otherLessons: { ...otherLessons, [name]: e.target.value === "" ? "" : Number(e.target.value) } })}/>
-                  </div>
-                ))}
-              </div>
-              <button style={{...s.manageBtn, marginTop:10, textAlign:"left", display:"flex", justifyContent:"space-between"}} onClick={() => setShowOtherRoutes(v => !v)}>
-                <span>🗺️ Διαδρομές με άλλους δασκάλους{(st.otherRoutes || []).length > 0 ? ` (${(st.otherRoutes || []).length})` : ""}</span>
-                <span>{showOtherRoutes ? "▴" : "▾"}</span>
-              </button>
-              {showOtherRoutes && (
-                <div style={{marginTop:8}}>
-                  <div style={{fontSize:11, color:"#888", marginBottom:6}}>Μετράνε ως ολοκληρωμένες στον έλεγχο υποχρεωτικών</div>
-                  <div style={s.checkGrid}>
-                    {routes.map(r => {
-                      const on = (st.otherRoutes || []).includes(r.name);
-                      return (
-                        <button key={r.name}
-                          style={on ? {...s.checkActive, background:"#2e7d32"} : s.checkInactive}
-                          onClick={() => updateStudentExam({ otherRoutes: on ? (st.otherRoutes || []).filter(n => n !== r.name) : [...(st.otherRoutes || []), r.name] })}
-                        >{r.name}</button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-              </>}
-            </div>
-
-            <div style={s.formCard}>
               <button style={s.cardToggle} onClick={() => setShowSecretaryCard(v => !v)}>
                 <span style={{flex:1, textAlign:"left"}}>
                   📨 Ενημέρωση γραμματείας
@@ -1009,16 +1007,8 @@ export default function App() {
             </div>
 
             <div style={s.formCard}>
-              <button style={s.cardToggle} onClick={() => setShowCompleteCard(v => !v)}>
-                <span style={{flex:1, textAlign:"left"}}>
-                  🎓 Ολοκλήρωση Εκπαίδευσης
-                  <span style={{display:"block", fontSize:12, fontWeight:600, marginTop:2, color: st.completed ? "#2e7d32" : "#999"}}>
-                    {st.completed ? "✅ Ολοκλήρωσε την εκπαίδευση" : "Σε εξέλιξη"}
-                  </span>
-                </span>
-                <span>{showCompleteCard ? "▴" : "▾"}</span>
-              </button>
-              {showCompleteCard && <div style={{marginTop:10}}>{st.completed ? (
+              <div style={{...s.sectionTitle, marginBottom:8}}>🎓 Ολοκλήρωση Εκπαίδευσης</div>
+              {st.completed ? (
                 <button style={s.paidTagBtn} onClick={() => setConfirmDialog({
                   message: "Να αναιρεθεί η ολοκλήρωση εκπαίδευσης του μαθητή;",
                   confirmLabel: "Ναι",
@@ -1032,7 +1022,7 @@ export default function App() {
                   cancelLabel: "Άκυρο",
                   onConfirm: () => updateStudentExam({ completed: true })
                 })}>🎓 Σήμανση Ολοκλήρωσης</button>
-              )}</div>}
+              )}
             </div>
             <div id="student-bottom" style={{display:"flex", gap:10}}>
               <button style={{...s.editBtn, padding:"13px", fontSize:14, flex:1, borderRadius:12}} onClick={() => startEditStudent(st)}>✏️ Επεξεργασία Στοιχείων</button>
@@ -1317,9 +1307,11 @@ export default function App() {
           {dayEntries.map(e => {
             const studentExists = students.some(x => String(x.id) === String(e.studentId));
             const stuFull = studentExists ? students.find(x => String(x.id) === String(e.studentId)) : null;
+            const faded = isPastDay || e.converted;
+            const fade = { opacity: faded ? 0.55 : 1 };
             return (
-              <div key={e.id} style={{...s.lessonCard, opacity: (isPastDay || e.converted) ? 0.55 : 1}}>
-                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+              <div key={e.id} style={{...s.lessonCard, background: faded ? "#f7f8fb" : s.lessonCard.background}}>
+                <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", ...fade}}>
                   <div style={{display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0}}>
                     <div style={{display:"flex", flexDirection:"column", alignItems:"center", minWidth:52, flexShrink:0}}>
                       <div style={s.schedTimeBig}>{e.time}</div>
@@ -1344,10 +1336,10 @@ export default function App() {
                     <button style={s.removeBtn} onClick={() => deleteScheduleEntry(e.id)}>✕</button>
                   </div>
                 </div>
-                {e.notes && <div style={s.lessonNotes}>{highlightMoney(e.notes)}</div>}
+                {e.notes && <div style={{...s.lessonNotes, ...fade}}>{highlightMoney(e.notes)}</div>}
                 {hasMoney(e.notes) && (
                   e.paid ? (
-                    <button style={s.paidTagBtn} onClick={() => setConfirmDialog({
+                    <button style={{...s.paidTagBtn, ...fade}} onClick={() => setConfirmDialog({
                       message: "Να μαρκαριστεί ξανά ως μη πληρωμένο;",
                       confirmLabel: "Ναι",
                       cancelLabel: "Άκυρο",
@@ -1363,10 +1355,10 @@ export default function App() {
                   )
                 )}
                 {studentExists && !e.converted && (
-                  <button style={s.convertBtn} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
+                  <button style={{...s.convertBtn, ...fade}} onClick={() => convertScheduleToLesson(e)}>✓ Καταχώρηση ως μάθημα</button>
                 )}
                 {e.converted && (
-                  <div style={s.convertedTag}>✓ Καταχωρήθηκε ως μάθημα</div>
+                  <div style={{...s.convertedTag, ...fade}}>✓ Καταχωρήθηκε ως μάθημα</div>
                 )}
               </div>
             );
@@ -2576,8 +2568,8 @@ const s = {
   redDot:{position:"absolute",top:-2,right:-2,width:10,height:10,borderRadius:"50%",background:"#e53935",border:"2px solid #1a237e",pointerEvents:"none"},
   skipBtn:{background:"none",color:"#999",border:"1px solid #e0e0e0",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer",alignSelf:"flex-start"},
   pickerBtn:{border:"1.5px solid #e0e0e0",borderRadius:10,padding:"10px 12px",fontSize:15,width:"100%",boxSizing:"border-box",background:"white",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,fontFamily:"inherit",textAlign:"left",color:"#333"},
-  pickerPanel:{border:"2px solid #3949ab",borderRadius:12,marginTop:6,background:"white",overflow:"hidden",boxShadow:"0 4px 14px rgba(26,35,126,0.18)"},
-  pickerSearch:{border:"1.5px solid #c5cae9",borderRadius:8,margin:8,padding:"9px 12px",fontSize:14,width:"calc(100% - 16px)",boxSizing:"border-box",outline:"none",fontFamily:"inherit",background:"#eef0fa",color:"#1a237e"},
+  pickerPanel:{border:"1.5px solid #e0e0e0",borderRadius:10,marginTop:6,background:"white",overflow:"hidden"},
+  pickerSearch:{border:"none",borderBottom:"1px solid #eee",padding:"10px 12px",fontSize:14,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"},
   pickerList:{maxHeight:260,overflowY:"auto"},
   pickerRow:{padding:"10px 12px",fontSize:14,cursor:"pointer",borderTop:"1px solid #f3f3f3",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4,color:"#1a237e"},
   pickerRowActive:{padding:"10px 12px",fontSize:14,cursor:"pointer",borderTop:"1px solid #f3f3f3",display:"flex",alignItems:"center",flexWrap:"wrap",gap:4,color:"#1a237e",background:"#e8eaf6"},
