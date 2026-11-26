@@ -825,8 +825,8 @@ export default function App() {
               <button style={s.settingsBtn} onClick={() => setShowHeaderMenu(v => !v)}>⋮</button>
               {showHeaderMenu && (
                 <div style={s.headerMenu}>
-                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); startAddLesson(); }}>＋ Νέο Μάθημα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("schedule"); }}>📅 Πρόγραμμα</button>
+                  <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); startAddLesson(); }}>＋ Νέο Μάθημα</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setView("sounds"); }}>🔊 Φωνητικές Οδηγίες</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); setQuestionsReturn(view); setView("questions"); }}>❓ Ερωτήσεις εξέτασης</button>
                   <button style={s.headerMenuItem} onClick={() => { setShowHeaderMenu(false); const el = document.getElementById('student-bottom'); if (el) el.scrollIntoView({behavior:'smooth'}); }}>⬇️ Μετάβαση κάτω</button>
@@ -1226,9 +1226,12 @@ export default function App() {
                 {dayEntries.length > 0 && <span style={s.feeBadge}>{Math.round(dayEntries.reduce((sum,e) => sum + ((e.duration != null ? e.duration : 90) / 90) * 14, 0))}€</span>}
               </div>
               {dayHasMoney && (
-                <span style={dayDiff > 0 ? s.diffBadgeUp : dayDiff < 0 ? s.diffBadgeDown : s.diffBadgeZero}>
-                  {dayDiff > 0 ? `⚖️ +${formatEuro(dayDiff)} προς σχολή` : dayDiff < 0 ? `⚖️ ${formatEuro(dayDiff)} σου οφείλονται` : "⚖️ 0€ ισοσκελισμένο"}
-                </span>
+                <div style={{display:"flex", justifyContent:"center", flexWrap:"wrap", gap:6}}>
+                  <span style={s.collectedBadge}>{`💰 ${formatEuro(dayCollected)} εισπράξεις`}</span>
+                  <span style={dayDiff > 0 ? s.diffBadgeUp : dayDiff < 0 ? s.diffBadgeDown : s.diffBadgeZero}>
+                    {dayDiff > 0 ? `⚖️ +${formatEuro(dayDiff)} προς σχολή` : dayDiff < 0 ? `⚖️ ${formatEuro(dayDiff)} σου οφείλονται` : "⚖️ 0€ ισοσκελισμένο"}
+                  </span>
+                </div>
               )}
             </div>
             <button style={s.dayNavBtn} onClick={() => shiftDay(1)}>›</button>
@@ -2664,6 +2667,7 @@ const s = {
   dayNavBtn:{background:"#e8eaf6",color:"#1a237e",border:"none",borderRadius:10,width:38,height:38,fontSize:20,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0},
   dayNavDate:{fontSize:15,fontWeight:700,color:"#1a237e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:"100%"},
   countBadge:{background:"#e3f2fd",color:"#1565c0",fontSize:10,fontWeight:700,borderRadius:10,padding:"2px 6px",whiteSpace:"nowrap"},
+  collectedBadge:{background:"#f3e5f5",color:"#6a1b9a",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
   diffBadgeUp:{background:"#fff3e0",color:"#e65100",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
   diffBadgeDown:{background:"#e3f2fd",color:"#1565c0",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
   diffBadgeZero:{background:"#e8f5e9",color:"#2e7d32",fontSize:11,fontWeight:700,borderRadius:10,padding:"3px 10px",whiteSpace:"nowrap"},
