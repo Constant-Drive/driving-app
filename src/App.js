@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { db } from "./firebase";
 import { doc, getDoc, setDoc, deleteField } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
@@ -232,6 +232,45 @@ export default function App() {
     };
   }, []);
 
+  // Payment reminder: cash-register sound when a lesson with an unpaid € amount ends
+  useEffect(() => {
+    function check() {
+      let fired = {};
+      try { fired = JSON.parse(localStorage.getItem("payReminderFired") || "{}"); } catch (e) {}
+      const todayStr = today();
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const due = (latestRef.current.schedule || []).filter(e => {
+        if (e.date !== todayStr || e.paid || fired[e.id] || !hasMoney(e.notes) || !e.time) return false;
+        const dur = e.duration != null ? e.duration : 90;
+        if (dur <= 0) return false;
+        const [h, m] = e.time.split(":").map(Number);
+        const end = h * 60 + m + dur;
+        return nowMin >= end && nowMin - end <= 10;
+      });
+      if (due.length === 0) return;
+      due.forEach(e => { fired[e.id] = todayStr; });
+      Object.keys(fired).forEach(k => { if (fired[k] !== todayStr) delete fired[k]; });
+      try { localStorage.setItem("payReminderFired", JSON.stringify(fired)); } catch (e) {}
+      beep("cash");
+      try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+      const e = due[0];
+      setConfirmDialog({
+        icon: "💰",
+        message: `Τέλος μαθήματος: ${e.studentName} — πληρωμή ${formatEuro(sumMoney(e.notes))}`,
+        confirmLabel: "✓ Πληρώθηκε",
+        cancelLabel: "Αργότερα",
+        onConfirm: () => {
+          const { schedule: cur, updateSchedule: upd } = latestRef.current;
+          upd(cur.map(x => x.id === e.id ? { ...x, paid: true } : x));
+        }
+      });
+    }
+    check();
+    const t = setInterval(check, 20000);
+    return () => clearInterval(t);
+  }, []);
+
   useEffect(() => onAuthStateChanged(auth, u => setUser(u || null)), []);
 
   useEffect(() => {
@@ -340,6 +379,8 @@ export default function App() {
   function updateExercises(newEx) { setExercises(newEx); persist(students, newEx, routes); }
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
   function updateSchedule(newSch) { setSchedule(newSch); persist(students, exercises, routes, newSch); }
+  const latestRef = useRef({});
+  latestRef.current = { schedule, updateSchedule };
   function updatePhrases(newPhr) { setPhrases(newPhr); persist(students, exercises, routes, undefined, newPhr); }
   function updateManagerPhone(newPhone) { setManagerPhone(newPhone); persist(students, exercises, routes, undefined, undefined, newPhone); }
 
@@ -401,6 +442,22 @@ export default function App() {
           playTone(ctx, 160, 0, 0.65, "square", 0.95); break;
         case "beeps":
           playTone(ctx, 1100, 0, 0.18, "square", 0.9); playTone(ctx, 1100, 0.28, 0.18, "square", 0.9); playTone(ctx, 1100, 0.56, 0.25, "square", 0.9); break;
+        case "cash": {
+          // "Ka-ching": drawer clunk + two bright bell strikes
+          const len = Math.floor(ctx.sampleRate * 0.12);
+          const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+          const data = buf.getChannelData(0);
+          for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+          const src = ctx.createBufferSource(); const g = ctx.createGain();
+          src.buffer = buf; g.gain.value = 0.9; src.connect(g); g.connect(ctx.destination); src.start(ctx.currentTime);
+          playTone(ctx, 140, 0, 0.12, "square", 0.5);
+          [0.16, 0.42].forEach(t => {
+            playTone(ctx, 2093, t, 0.9, "sine", 0.55);
+            playTone(ctx, 2637, t, 0.7, "sine", 0.35);
+            playTone(ctx, 4186, t, 0.4, "sine", 0.18);
+          });
+          break;
+        }
         default:
           playTone(ctx, 300, 0, 0.7, "sawtooth", 0.9);
       }
@@ -633,7 +690,7 @@ export default function App() {
     <div style={s.page}>
       <div style={s.overlay}>
         <div style={s.dialog}>
-          <div style={s.dialogIcon}>⚠️</div>
+          <div style={s.dialogIcon}>{confirmDialog.icon || "⚠️"}</div>
           <div style={s.dialogMsg}>{confirmDialog.message}</div>
           <div style={s.dialogBtns}>
             <button style={s.dialogCancel} onClick={() => { if (confirmDialog.onCancel) confirmDialog.onCancel(); setConfirmDialog(null); }}>
