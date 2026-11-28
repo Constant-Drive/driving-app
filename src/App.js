@@ -6,6 +6,8 @@ import { QUESTIONS } from "./questions";
 
 const DATA_DOC = doc(db, "app", "data");
 const VISITS_DOC = doc(db, "app", "visits");
+const SOUND_DOC = doc(db, "app", "sound");
+const MAX_SOUND_BYTES = 700 * 1024; // Firestore document limit is 1MB (base64 adds ~33%)
 const auth = getAuth();
 
 // Anonymous per-browser id, kept in localStorage (used only for the visit log)
@@ -200,6 +202,8 @@ export default function App() {
   const [visits, setVisits] = useState(null);
   const [visitsError, setVisitsError] = useState(false);
   const [visitsReturn, setVisitsReturn] = useState(null);
+  const [customSound, setCustomSound] = useState(null); // { name, data } or null
+  const [soundMsg, setSoundMsg] = useState("");
   const [user, setUser] = useState(undefined); // undefined = checking, null = signed out
   const [authError, setAuthError] = useState("");
   const [accessDenied, setAccessDenied] = useState(false);
@@ -232,6 +236,63 @@ export default function App() {
     };
   }, []);
 
+  // Payment sound: the user's own uploaded file if set, otherwise the built-in cash register
+  const soundAudioRef = useRef(null);
+  function playPaymentSound() {
+    const cs = latestRef.current.customSound;
+    if (!cs || !cs.data) { beep("cash"); return; }
+    try {
+      if (soundAudioRef.current) { soundAudioRef.current.pause(); }
+      const a = new Audio(cs.data);
+      soundAudioRef.current = a;
+      a.play().catch(() => beep("cash"));
+      setTimeout(() => { try { a.pause(); } catch (e) {} }, 15000); // never longer than 15s
+    } catch (e) { beep("cash"); }
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    getDoc(SOUND_DOC)
+      .then(snap => setCustomSound(snap.exists() && snap.data().data ? { name: snap.data().name || "Δικός μου ήχος", data: snap.data().data } : null))
+      .catch(e => console.error(e));
+  }, [user]);
+
+  function onSoundFile(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!file) return;
+    if (file.size > MAX_SOUND_BYTES) {
+      setSoundMsg(`⚠ Το αρχείο είναι ${Math.round(file.size / 1024)} KB. Το όριο είναι ${Math.round(MAX_SOUND_BYTES / 1024)} KB — διάλεξε πιο σύντομο ήχο (λίγα δευτερόλεπτα, mp3).`);
+      return;
+    }
+    setSoundMsg("Ανέβασμα…");
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const data = reader.result;
+      const test = new Audio(data);
+      test.oncanplaythrough = null;
+      test.onerror = () => setSoundMsg("⚠ Ο browser δεν μπορεί να παίξει αυτό το αρχείο. Δοκίμασε mp3.");
+      try {
+        await setDoc(SOUND_DOC, { name: file.name, data });
+        setCustomSound({ name: file.name, data });
+        setSoundMsg("✓ Αποθηκεύτηκε. Πάτα «Δοκιμή ήχου» για να τον ακούσεις.");
+      } catch (e) {
+        console.error(e);
+        setSoundMsg("⚠ Δεν αποθηκεύτηκε (" + (e.code || e.message) + ").");
+      }
+    };
+    reader.onerror = () => setSoundMsg("⚠ Δεν ήταν δυνατή η ανάγνωση του αρχείου.");
+    reader.readAsDataURL(file);
+  }
+
+  async function resetSound() {
+    try {
+      await setDoc(SOUND_DOC, { name: deleteField(), data: deleteField() }, { merge: true });
+      setCustomSound(null);
+      setSoundMsg("✓ Επανήλθε ο ήχος ταμειακής.");
+    } catch (e) { console.error(e); setSoundMsg("⚠ Δεν ήταν δυνατή η επαναφορά."); }
+  }
+
   // Payment reminder: cash-register sound when a lesson with an unpaid € amount ends
   useEffect(() => {
     function check() {
@@ -252,7 +313,7 @@ export default function App() {
       due.forEach(e => { fired[e.id] = todayStr; });
       Object.keys(fired).forEach(k => { if (fired[k] !== todayStr) delete fired[k]; });
       try { localStorage.setItem("payReminderFired", JSON.stringify(fired)); } catch (e) {}
-      beep("cash");
+      playPaymentSound();
       try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
       const e = due[0];
       setConfirmDialog({
@@ -380,7 +441,7 @@ export default function App() {
   function updateRoutes(newRt) { setRoutes(newRt); persist(students, exercises, newRt); }
   function updateSchedule(newSch) { setSchedule(newSch); persist(students, exercises, routes, newSch); }
   const latestRef = useRef({});
-  latestRef.current = { schedule, updateSchedule };
+  latestRef.current = { schedule, updateSchedule, customSound };
   function updatePhrases(newPhr) { setPhrases(newPhr); persist(students, exercises, routes, undefined, newPhr); }
   function updateManagerPhone(newPhone) { setManagerPhone(newPhone); persist(students, exercises, routes, undefined, undefined, newPhone); }
 
@@ -443,19 +504,35 @@ export default function App() {
         case "beeps":
           playTone(ctx, 1100, 0, 0.18, "square", 0.9); playTone(ctx, 1100, 0.28, 0.18, "square", 0.9); playTone(ctx, 1100, 0.56, 0.25, "square", 0.9); break;
         case "cash": {
-          // "Ka-ching": drawer clunk + two bright bell strikes
-          const len = Math.floor(ctx.sampleRate * 0.12);
-          const buf = ctx.createBuffer(1, len, ctx.sampleRate);
-          const data = buf.getChannelData(0);
-          for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-          const src = ctx.createBufferSource(); const g = ctx.createGain();
-          src.buffer = buf; g.gain.value = 0.9; src.connect(g); g.connect(ctx.destination); src.start(ctx.currentTime);
-          playTone(ctx, 140, 0, 0.12, "square", 0.5);
-          [0.16, 0.42].forEach(t => {
-            playTone(ctx, 2093, t, 0.9, "sine", 0.55);
-            playTone(ctx, 2637, t, 0.7, "sine", 0.35);
-            playTone(ctx, 4186, t, 0.4, "sine", 0.18);
+          // Old mechanical cash register: key clatter, 4 metallic bell strikes, drawer sliding open
+          const master = ctx.createGain();
+          master.gain.value = 0.68;
+          master.connect(ctx.destination);
+          const now = ctx.currentTime;
+          const tn = (freq, start, dur, type, vol) => {
+            const o = ctx.createOscillator(); const g = ctx.createGain();
+            o.type = type; o.frequency.value = freq; o.connect(g); g.connect(master);
+            g.gain.setValueAtTime(vol, now + start);
+            g.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+            o.start(now + start); o.stop(now + start + dur);
+          };
+          const nz = (start, dur, vol, power) => {
+            const len = Math.max(1, Math.floor(ctx.sampleRate * dur));
+            const b = ctx.createBuffer(1, len, ctx.sampleRate);
+            const d = b.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * vol * Math.pow(1 - i / len, power);
+            const src = ctx.createBufferSource(); src.buffer = b; src.connect(master); src.start(now + start);
+          };
+          [0, 0.06, 0.13, 0.19, 0.24].forEach(t => { nz(t, 0.035, 0.55, 2); tn(110, t, 0.05, "square", 0.25); });
+          const BELL = 2200;
+          const PARTIALS = [[1.0, 0.45, 1.0], [1.004, 0.30, 1.0], [2.76, 0.22, 0.55], [5.40, 0.13, 0.30], [8.93, 0.07, 0.15]];
+          [[0.32, 0.8, 1.0], [0.52, 0.75, 1.0], [0.72, 0.8, 1.0], [0.92, 1.0, 1.9]].forEach(([t, loud, lf]) => {
+            nz(t, 0.012, 0.35 * loud, 1);
+            PARTIALS.forEach(([ratio, vol, dur]) => tn(BELL * ratio, t, dur * lf, "sine", vol * loud));
           });
+          nz(1.05, 0.40, 0.22, 1.5);
+          tn(90, 1.42, 0.12, "square", 0.35);
+          nz(1.42, 0.05, 0.5, 2);
           break;
         }
         default:
@@ -1865,6 +1942,30 @@ export default function App() {
     <div style={s.page}>
       <div style={s.header}><div style={s.headerInner}><button style={s.back} onClick={() => setView("home")}>‹ Πίσω</button><div style={s.appTitle}>Ρυθμίσεις Λιστών</div></div></div>
       <div style={s.container}>
+        <div style={s.formCard}>
+          <div style={{...s.sectionTitle, marginBottom:6}}>💰 Υπενθύμιση πληρωμής</div>
+          <div style={{fontSize:12, color:"#888", marginBottom:10, lineHeight:1.5}}>Παίζει στο τέλος κάθε σημερινού μαθήματος που έχει απλήρωτο ποσό σε €, όσο η εφαρμογή είναι ανοιχτή.</div>
+          <div style={{fontSize:13, color:"#1a237e", fontWeight:600, marginBottom:8}}>
+            Ήχος: {customSound ? `🎵 ${customSound.name}` : "🛎️ Ταμειακή μηχανή (προεπιλογή)"}
+          </div>
+          <div style={{display:"flex", flexDirection:"column", gap:8}}>
+            <button style={s.progressBtn} onClick={playPaymentSound}>🔊 Δοκιμή ήχου</button>
+            <label style={{...s.manageBtn, display:"block", textAlign:"center", boxSizing:"border-box", cursor:"pointer"}}>
+              📂 Ανέβασμα δικού μου ήχου
+              <input type="file" accept="audio/*" style={{display:"none"}} onChange={onSoundFile}/>
+            </label>
+            {customSound && (
+              <button style={s.skipBtn} onClick={() => setConfirmDialog({
+                message: "Να επανέλθει ο ήχος ταμειακής μηχανής;",
+                confirmLabel: "Επαναφορά",
+                cancelLabel: "Άκυρο",
+                onConfirm: resetSound
+              })}>↩️ Επαναφορά ήχου ταμειακής</button>
+            )}
+          </div>
+          <div style={{fontSize:11, color:"#888", marginTop:8}}>Αρχείο ήχου (mp3, m4a, wav, ogg) έως {Math.round(MAX_SOUND_BYTES / 1024)} KB. Παίζει το πολύ 15 δευτερόλεπτα.</div>
+          {soundMsg && <div style={{fontSize:12, fontWeight:600, marginTop:6, color: soundMsg.startsWith("⚠") ? "#c62828" : "#2e7d32"}}>{soundMsg}</div>}
+        </div>
         <div style={s.formCard}>
           <div style={{...s.sectionTitle, marginBottom:8}}>📱 Υπεύθυνη Εξετάσεων (SMS)</div>
           <label style={s.label}>Τηλέφωνο (με κωδικό χώρας, π.χ. +30697...)</label>
